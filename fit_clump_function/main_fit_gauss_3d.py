@@ -8,6 +8,11 @@ from multiprocessing import Pool
 
 
 def create_folder(path):
+    """
+    创建文件夹
+    :param path:
+    :return:
+    """
     if not os.path.exists(path):
         os.mkdir(path)
 
