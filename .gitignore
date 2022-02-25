@@ -1,6 +1,8 @@
 /.idea/
-
+/0170+010_L/
 /data/
 /build/
 /dist/
-DensityClust.vsd
+requirements.txt
+setup.py
+README.MD
