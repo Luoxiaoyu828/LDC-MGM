@@ -1,0 +1,14 @@
+numpy~=1.19.2
+pandas~=1.3.2
+tabulate~=0.8.9
+matplotlib~=3.3.4
+scikit-image~=0.18.1
+scipy~=1.6.2
+densityclust~=1.0.7
+astropy~=4.2
+setuptools~=52.0.0
+photutils~=1.2.0
+bm3d~=3.0.9
+pillow~=8.1.2
+bm4d~=4.0.0
+sympy~=1.8
