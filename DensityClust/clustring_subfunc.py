@@ -135,7 +135,7 @@ def save_outcat(outcat_name, outcat):
         dataframe = dataframe.round({'ID': 0, 'Peak1': 0, 'Peak2': 0, 'Cen1': 3, 'Cen2': 3,
                                      'Size1': 3, 'Size2': 3, 'Peak': 3, 'Sum': 3, 'Volume': 3})
         dataframe.to_csv(outcat_name, sep='\t', index=False)
-        # dataframe.to_fwf(detected_outcat_name)
+        # dataframe.to_fwf(outcat_name)
     elif outcat_colums == 13:
         # 3d result
         table_title = ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'Peak', 'Sum',
@@ -144,7 +144,7 @@ def save_outcat(outcat_name, outcat):
         dataframe = dataframe.round({'ID': 0, 'Peak1': 0, 'Peak2': 0, 'Peak3': 0, 'Cen1': 3, 'Cen2': 3, 'Cen3': 3,
                                      'Size1': 3, 'Size2': 3, 'Size3': 3, 'Peak': 3, 'Sum': 3, 'Volume': 3})
         dataframe.to_csv(outcat_name, sep='\t', index=False)
-        # dataframe.to_fwf(detected_outcat_name)
+        # dataframe.to_fwf(outcat_name)
 
     elif outcat_colums == 11:
         # fitting 2d data result

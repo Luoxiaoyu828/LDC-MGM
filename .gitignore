@@ -3,6 +3,8 @@
 /data/
 /build/
 /dist/
+*.fits
+*.csv
 requirements.txt
 setup.py
 README.MD
