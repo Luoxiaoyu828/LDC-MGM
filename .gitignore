@@ -8,3 +8,5 @@
 requirements.txt
 setup.py
 README.MD
+fit_simulate_data.py
+fit_test.py

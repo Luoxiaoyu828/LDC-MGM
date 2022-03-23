@@ -107,7 +107,7 @@ def fit_gauss_2d(X,Y,params):
 
 
 def errorfunc(p, X, Y):
-    power = 4
+    power = 1
     gauss_3d_func = get_gauss_3d_func_by_paras(params)
     gauss_3d_value = gauss_3d_func(X[:, 0], X[:, 1], X[:, 2])
     weight = gauss_3d_value ** power / ((gauss_3d_value ** power).sum())  #
@@ -145,7 +145,8 @@ def fit_gauss_3d(X, Y, params):
 def fit_gauss_3d_new(points_all, params):
     """
     :param points_all: [x, y, v, intensity]
-    :param params: LDC算法计算的3维高斯模型的初始猜想值
+    :param params: pandas.DataFrame
+        LDC算法计算的3维高斯模型的初始猜想值
     :return:
         返回模型的拟合值
         [A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3, success_1
@@ -153,9 +154,12 @@ def fit_gauss_3d_new(points_all, params):
          An, xn, yn, sn_1, sn_2,theta_n,vn, sn_3， success_n]
          其中: theta为弧度值,success_n表示拟合是否成功
     """
-    power = 4
-    columns_name = [item for item in params.keys().values]    # columns_name = ['A', 'x0', 'y0', 's1', 's2', 'theta', 'v0', 's3']
+    power = 1
+    columns_name = [item for item in params.keys().values]
+    # columns_name = ['A', 'x0', 'y0', 's1', 's2', 'theta', 'v0', 's3']
     params = params.values.flatten()
+    # print(params.shape)
+    # print(points_all.shape)
     gauss_3d_func = get_gauss_3d_func_by_paras(params)
     X = points_all['x_2'].values
     Y = points_all['y_1'].values
@@ -165,9 +169,15 @@ def fit_gauss_3d_new(points_all, params):
     weight = gauss_3d_value ** power / ((gauss_3d_value ** power).sum()) # 创建拟合的权重
     # weight = np.ones_like(weight)
     errorfunction = lambda p: np.ravel((get_gauss_3d_func_by_paras(p)(X, Y, V) - Intensity) * weight)
-    params_fit, success = optimize.leastsq(errorfunction, x0=params)
-    # res_robust = least_squares(errorfunction,x0=params,loss='soft_l1',args=(X, Y))
-    # print(res_robust)
+    # params_fit, success = optimize.leastsq(errorfunction, x0=params, )
+    low_ = []
+    [low_.extend([0, 20, 20, 0, 0, 0, 0, 0]) for i in range(params.shape[0]//8)]
+    up_ = []
+    [up_.extend([20, 100, 100, 20, 20, 7, 2400, 40]) for i in range(params.shape[0] // 8)]
+    res_robust = optimize.least_squares(errorfunction, x0=params, loss='soft_l1', bounds=[low_, up_])
+    params_fit = res_robust.x
+    success = res_robust['success']
+    cost = res_robust['cost']
     param_num = 8  # 一个三维高斯的参数个数(A0, x0, y0, s0_1,s0_2, theta_0)
     num_j = params.shape[0] // param_num  # 对输入参数取整， 得到三维高斯的个数
 
@@ -175,6 +185,7 @@ def fit_gauss_3d_new(points_all, params):
     params_fit_df = pd.DataFrame(params_fit, columns=columns_name)
     # params_fit_df['theta'] = (params_fit_df['theta'] / np.pi * 180) % 180
     params_fit_df['success'] = success
+    params_fit_df['cost'] = cost
 
     return params_fit_df
 

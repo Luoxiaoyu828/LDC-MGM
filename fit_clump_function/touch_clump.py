@@ -72,7 +72,7 @@ def connect_clump(outcat, mult=1):
 if __name__ == '__main__':
     mult = 1.5   # mult  越大表示判断重叠的条件越宽松
     outcat = pd.read_csv(r'F:\LDC_python\detection\test_data_zhou_again\n_clump_100\outcat\gaussian_outcat_000.txt', sep='\t')
-    result = connect_clump(outcat,mult)
+    result = connect_clump(outcat, mult)
 
     aa = outcat.values[[1,71,99],4:10]
     print(((aa[2,:3] - aa[1,:3])**2).sum()**0.5)

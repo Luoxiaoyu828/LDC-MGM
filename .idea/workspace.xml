@@ -19,11 +19,26 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a0956c1d-525c-4747-93f0-f98d3dd678ce" name="Default Changelist" comment="" />
+    <list default="true" id="a0956c1d-525c-4747-93f0-f98d3dd678ce" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fit_clump_function/connect_clump.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fit_clump_function/sympy_fit_gauss.py" beforeDir="false" afterPath="$PROJECT_DIR$/fit_clump_function/multi_gauss_fitting.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fit_clump_function/touch_clump.py" beforeDir="false" afterPath="$PROJECT_DIR$/fit_clump_function/touch_clump.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main_fit_gauss_3d.py" beforeDir="false" afterPath="$PROJECT_DIR$/main_fit_gauss_3d.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tools/show_clumps.py" beforeDir="false" afterPath="$PROJECT_DIR$/tools/show_clumps.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -37,21 +52,73 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../../DensityClust_distribution_class" />
+    <property name="WebServerToolWindowPanel.toolwindow.highlight.mappings" value="true" />
+    <property name="WebServerToolWindowPanel.toolwindow.highlight.symlinks" value="true" />
+    <property name="WebServerToolWindowPanel.toolwindow.show.date" value="false" />
+    <property name="WebServerToolWindowPanel.toolwindow.show.permissions" value="false" />
+    <property name="WebServerToolWindowPanel.toolwindow.show.size" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../../LDC_python/mnist3D_CNN-master" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
-    <property name="settings.editor.selected.configurable" value="vcs.Git" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="F:\Parameter_reduction\LDC\0170+010_L\simulate_data\points" />
+    </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="F:\Parameter_reduction\LDC" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Python.fit_simulate_data">
+    <configuration name="fit_simulate_data" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="LDC" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/fit_simulate_data.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="fit_test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="LDC" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/fit_test.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="main_fit_gauss_3d" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="LDC" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
       <option name="SDK_HOME" value="" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="true" />
@@ -67,11 +134,35 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="show_clumps" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="LDC" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tools" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/tools/show_clumps.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.main_fit_gauss_3d" />
-        <item itemvalue="Python.main_fit_gauss_3d" />
-        <item itemvalue="Python.main_fit_gauss_3d" />
+        <item itemvalue="Python.fit_simulate_data" />
+        <item itemvalue="Python.fit_simulate_data" />
+        <item itemvalue="Python.fit_simulate_data" />
+        <item itemvalue="Python.fit_simulate_data" />
+        <item itemvalue="Python.fit_simulate_data" />
       </list>
     </recent_temporary>
   </component>
@@ -85,7 +176,12 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1645778455113</updated>
-      <workItem from="1645778456418" duration="36696000" />
+      <workItem from="1645778456418" duration="67624000" />
+      <workItem from="1646644855135" duration="5220000" />
+      <workItem from="1647568193685" duration="779000" />
+      <workItem from="1647589686926" duration="5422000" />
+      <workItem from="1647675892862" duration="17410000" />
+      <workItem from="1647928408331" duration="12476000" />
     </task>
     <servers />
   </component>
@@ -102,48 +198,57 @@
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="549" y="171" key="FileChooserDialogImpl" timestamp="1645973559476">
+    <state x="395" y="95" key="#Inspections" timestamp="1646126941904">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state x="549" y="171" key="FileChooserDialogImpl/0.0.1536.834@0.0.1536.834" timestamp="1645973559476" />
-    <state width="1493" height="310" key="GridCell.Tab.0.bottom" timestamp="1645973453834">
+    <state x="395" y="95" key="#Inspections/0.0.1536.834@0.0.1536.834" timestamp="1646126941904" />
+    <state x="504" y="0" key="Diagram.Print.Preview.Dialog" timestamp="1647935187275">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.0.bottom/0.0.1536.834@0.0.1536.834" timestamp="1645973453834" />
-    <state width="1493" height="310" key="GridCell.Tab.0.center" timestamp="1645973453834">
+    <state x="504" y="0" key="Diagram.Print.Preview.Dialog/0.0.1536.834@0.0.1536.834" timestamp="1647935187275" />
+    <state x="549" y="171" key="FileChooserDialogImpl" timestamp="1647936107594">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.0.center/0.0.1536.834@0.0.1536.834" timestamp="1645973453834" />
-    <state width="1493" height="310" key="GridCell.Tab.0.left" timestamp="1645973453834">
+    <state x="549" y="171" key="FileChooserDialogImpl/0.0.1536.834@0.0.1536.834" timestamp="1647936107594" />
+    <state width="1493" height="312" key="GridCell.Tab.0.bottom" timestamp="1646614598436">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.0.left/0.0.1536.834@0.0.1536.834" timestamp="1645973453834" />
-    <state width="1493" height="310" key="GridCell.Tab.0.right" timestamp="1645973453834">
+    <state width="1493" height="312" key="GridCell.Tab.0.bottom/0.0.1536.834@0.0.1536.834" timestamp="1646614598436" />
+    <state width="1493" height="312" key="GridCell.Tab.0.center" timestamp="1646614598436">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.0.right/0.0.1536.834@0.0.1536.834" timestamp="1645973453834" />
-    <state width="1493" height="310" key="GridCell.Tab.1.bottom" timestamp="1645973453834">
+    <state width="1493" height="312" key="GridCell.Tab.0.center/0.0.1536.834@0.0.1536.834" timestamp="1646614598436" />
+    <state width="1493" height="312" key="GridCell.Tab.0.left" timestamp="1646614598435">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.1.bottom/0.0.1536.834@0.0.1536.834" timestamp="1645973453834" />
-    <state width="1493" height="310" key="GridCell.Tab.1.center" timestamp="1645973453834">
+    <state width="1493" height="312" key="GridCell.Tab.0.left/0.0.1536.834@0.0.1536.834" timestamp="1646614598435" />
+    <state width="1493" height="312" key="GridCell.Tab.0.right" timestamp="1646614598436">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.1.center/0.0.1536.834@0.0.1536.834" timestamp="1645973453834" />
-    <state width="1493" height="310" key="GridCell.Tab.1.left" timestamp="1645973453834">
+    <state width="1493" height="312" key="GridCell.Tab.0.right/0.0.1536.834@0.0.1536.834" timestamp="1646614598436" />
+    <state width="1493" height="312" key="GridCell.Tab.1.bottom" timestamp="1646614598436">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.1.left/0.0.1536.834@0.0.1536.834" timestamp="1645973453834" />
-    <state width="1493" height="310" key="GridCell.Tab.1.right" timestamp="1645973453834">
+    <state width="1493" height="312" key="GridCell.Tab.1.bottom/0.0.1536.834@0.0.1536.834" timestamp="1646614598436" />
+    <state width="1493" height="312" key="GridCell.Tab.1.center" timestamp="1646614598436">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.1.right/0.0.1536.834@0.0.1536.834" timestamp="1645973453834" />
-    <state x="270" y="61" key="SettingsEditor" timestamp="1645779233486">
+    <state width="1493" height="312" key="GridCell.Tab.1.center/0.0.1536.834@0.0.1536.834" timestamp="1646614598436" />
+    <state width="1493" height="312" key="GridCell.Tab.1.left" timestamp="1646614598436">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state x="270" y="61" key="SettingsEditor/0.0.1536.834@0.0.1536.834" timestamp="1645779233486" />
+    <state width="1493" height="312" key="GridCell.Tab.1.left/0.0.1536.834@0.0.1536.834" timestamp="1646614598436" />
+    <state width="1493" height="312" key="GridCell.Tab.1.right" timestamp="1646614598436">
+      <screen x="0" y="0" width="1536" height="834" />
+    </state>
+    <state width="1493" height="312" key="GridCell.Tab.1.right/0.0.1536.834@0.0.1536.834" timestamp="1646614598436" />
+    <state x="270" y="61" key="SettingsEditor" timestamp="1646098034855">
+      <screen x="0" y="0" width="1536" height="834" />
+    </state>
+    <state x="270" y="61" key="SettingsEditor/0.0.1536.834@0.0.1536.834" timestamp="1646098034855" />
     <state x="563" y="330" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1645779255379">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
@@ -154,18 +259,18 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/main_fit_gauss_3d.py</url>
-          <line>41</line>
+          <line>42</line>
           <option name="timeStamp" value="4" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/fit_clump_function/sympy_fit_gauss.py</url>
+          <url>file://$PROJECT_DIR$/fit_clump_function/multi_gauss_fitting.py</url>
           <line>129</line>
           <option name="timeStamp" value="5" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main_fit_gauss_3d.py</url>
+          <url>file://$PROJECT_DIR$/tools/show_clumps.py</url>
           <line>228</line>
-          <option name="timeStamp" value="9" />
+          <option name="timeStamp" value="10" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -178,6 +283,8 @@
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/LDC$main_fit_gauss_3d.coverage" NAME="main_fit_gauss_3d Coverage Results" MODIFIED="1645955215169" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/LDC$show_clumps.coverage" NAME="show_clumps Coverage Results" MODIFIED="1646058500490" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tools" />
+    <SUITE FILE_PATH="coverage/LDC$fit_simulate_data.coverage" NAME="fit_simulate_data Coverage Results" MODIFIED="1647934555970" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/LDC$main_fit_gauss_3d.coverage" NAME="main_fit_gauss_3d Coverage Results" MODIFIED="1646224093403" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

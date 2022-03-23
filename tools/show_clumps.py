@@ -213,9 +213,83 @@ def deal_data(path_detect, path_save_fig, loc=False):
         make_plot_11(clump_item_loc, data_i_max, data_i_mean_, loc_cen3, loc_peak3, title_name, path_save_fig)
 
 
-if __name__ == '__main__':
-    path_detect = r'F:\DensityClust_distribution_class\0155+030_L'
+def get_clump_loc_df(points_name_list):
+    """
+    根据云核的点和强度，返回局部立方体
+    :param points_name: 云核点坐标及强度文件名
+    :return:
+        np.array (n*m*k)
+    """
+    points_all = pd.DataFrame()
+    for points_name in points_name_list:
+        points = pd.read_csv(points_name)
+        points_all = pd.concat([points_all, points], axis=0)
 
-    path_save_fig = path_detect
-    deal_data(path_detect, path_save_fig,loc=True)
+    pif = points_all[['x_2', 'y_1', 'v_0']].values
+    pif_1 = pif - pif.min(axis=0)
+
+    data = np.zeros(pif_1.max(axis=0) + 1)
+    for i, pif_ in enumerate(pif_1):
+        # print(pif_)
+        data[pif_[0],pif_[1],pif_[2]] = points_all['Intensity'].values[i]
+
+    return data
+    # make_plot_11(data, data[:,3,2], data[:,3,2], 10, 10, 'jrf', '')
+
+
+def get_save_clumps_xyv(origin_data_name, mask_name, outcat_name, save_path):
+    """
+    将云核的坐标及对应的强度整理保存为.csv文件
+    :param origin_data_name: 原始数据
+    :param mask_name: 检测得到的掩模
+    :param outcat_name: 检测得到的核表
+    :param save_path: 坐标保存的文件夹
+    :return:
+        DataFarame [ x_2, y_1 , v_0, Intensity]
+    """
+    data = fits.getdata(origin_data_name)
+    mask = fits.getdata(mask_name)
+    f_outcat = pd.read_csv(outcat_name, sep='\t')
+
+    [data_x, data_y, data_v] = data.shape
+    Xin, Yin, Vin = np.mgrid[1:data_x + 1, 1:data_y + 1, 1:data_v + 1]
+    X = np.vstack([Vin.flatten(), Yin.flatten(), Xin.flatten()]).T  # 坐标原点为1
+    mask_flatten = mask.flatten()
+    Y = data.flatten()
+    clumps_id = f_outcat['ID'].values.astype(np.int64)
+    for id_clumps_item in clumps_id:
+        clump_item_df = pd.DataFrame([])
+        ind = np.where(mask_flatten == id_clumps_item)[0]
+
+        clump_item_df[['x_2', 'y_1', 'v_0']] = X[ind, :]
+        clump_item_df['Intensity'] = Y[ind]
+        clump_item_name = os.path.join(save_path, 'clump_id_xyz_intensity_%04d.csv' % id_clumps_item)
+
+        clump_item_df.to_csv(clump_item_name, index=False)
+
+
+def display_data(data):
+    if data.ndim == 3:
+        fig = plt.figure(figsize=(15, 8))
+
+        ax1 = fig.add_subplot(1, 3, 1)
+        ax2 = fig.add_subplot(1, 3, 2)
+        ax3 = fig.add_subplot(1, 3, 3)
+        im0 = ax1.imshow(data.sum(0), origin='lower')  # x银纬,y银经
+        im1 = ax2.imshow(data.sum(1), origin='lower')  # x银纬，y速度
+        im2 = ax3.imshow(data.sum(2), origin='lower')  # x银经，y速度
+        plt.show()
+        return fig, (ax1, ax2, ax3)
+
+if __name__ == '__main__':
+    # path_detect = r'F:\DensityClust_distribution_class\0155+030_L'
+    #
+    # path_save_fig = path_detect
+    # deal_data(path_detect, path_save_fig,loc=True)
+    points_name_list = [r'F:\Parameter_reduction\LDC\0170+010_L\0170+010_L_points\clump_id_xyz_intensity_0023.csv',
+                 ]
+    data = get_clump_loc_df(points_name_list)
+    # data = fits.getdata(r'F:\Parameter_reduction\LDC\0170+010_L\simulate_data\gaussian_out_002.fits')
+
+
 

@@ -4,7 +4,7 @@ import os
 import time
 from scipy import integrate
 import pandas as pd
-from fit_clump_function import sympy_fit_gauss, touch_clump
+from fit_clump_function import multi_gauss_fitting, touch_clump
 from multiprocessing import Pool
 
 
@@ -16,6 +16,7 @@ def create_folder(path):
     """
     if not os.path.exists(path):
         os.mkdir(path)
+        print(path + 'created successfully!')
 
 
 def get_fit_outcat_record(p_fit_single_clump):
@@ -30,7 +31,7 @@ def get_fit_outcat_record(p_fit_single_clump):
     for para_item in range(num_j):
         p_fit_single_clump_ = p_fit_single_clump[para_item * param_num: (para_item + 1) * param_num]
 
-        func = sympy_fit_gauss.get_gauss_3d_func_by_paras(p_fit_single_clump_)
+        func = multi_gauss_fitting.get_gauss_3d_func_by_paras(p_fit_single_clump_)
         try:
             integrate_result = integrate.nquad(func, [[0, 120], [0, 120], [1, 2411]])
             Sum_ = integrate_result[0]
@@ -57,37 +58,53 @@ def get_fit_outcat_record(p_fit_single_clump):
 
 
 def get_fit_outcat_record_new(params_fit_pf):
-    # p_fit_single_clump[5] = (p_fit_single_clump[5] / np.pi * 180) % 180
-    # 将弧度转换成角度, 并将其转换到0-180度
+    """
 
-    num_j = params_fit_pf.shape[0]  # 三维高斯成分个数
-    outcat_record = pd.DataFrame()
-    clumps_sum = np.zeros([num_j, 1])
+    :param params_fit_pf: 拟合数据结果，pandas.DataFrame
+    :return:
+        整理的拟合核表
+    'ID': 分子云核编号
+    'Peak1','Peak2', 'Peak3': 峰值位置坐标
+    'Cen1', 'Cen2', 'Cen3': 质心位置坐标
+    'Size1', 'Size2', 'Size3': 云核的轴长[FWHM=2.3548*sigma]
+    'theta': 云核在银经银纬面上的旋转角
+    'Peak': 云核的峰值
+    'Sum': 云核的总流量
+    'success': 拟合是否成功
+    'cost': 拟合函数和实际数据间的误差
+    """
+
+    gauss_num = params_fit_pf.shape[0]  # 三维高斯成分个数
+    outcat_record = pd.DataFrame([])
+    clumps_sum = np.zeros([gauss_num, 1])
     for i, item in enumerate(params_fit_pf.values):
-        print(item)
         pfsc = item[:8]
-        func = sympy_fit_gauss.get_gauss_3d_func_by_paras(pfsc)
-        x_lim = [pfsc[1] - 10 * pfsc[3], pfsc[1] + 10 * pfsc[3]]
-        y_lim = [pfsc[2] - 10 * pfsc[4], pfsc[2] + 10 * pfsc[4]]
-        v_lim = [pfsc[6] - 10 * pfsc[7], pfsc[6] + 10 * pfsc[7]]
+        pfsc_1 = params_fit_pf.iloc[i]
+        func = multi_gauss_fitting.get_gauss_3d_func_by_paras(pfsc)
+
+        x_lim = [pfsc_1['x0'] - 10 * pfsc_1['s1'], pfsc_1['x0'] + 10 * pfsc_1['s1']]
+        y_lim = [pfsc_1['y0'] - 10 * pfsc_1['s2'], pfsc_1['y0'] + 10 * pfsc_1['s2']]
+        v_lim = [pfsc_1['v0'] - 10 * pfsc_1['s3'], pfsc_1['v0'] + 10 * pfsc_1['s3']]
+
         integrate_result = integrate.nquad(func, [x_lim, y_lim, v_lim])
         clumps_sum[i, 0] = integrate_result[0]
 
-    outcat_record['ID'] = np.array([i for i in range(num_j)])
+    outcat_record['ID'] = np.array([i for i in range(gauss_num)])
     outcat_record[['Peak1', 'Peak2', 'Peak3']] = params_fit_pf[['x0', 'y0', 'v0']]
-    outcat_record[['Cen1', 'Cen2', 'Cen3']] = params_fit_pf[['x0', 'y0', 'v0']]
-    outcat_record[['Size1', 'Size2', 'Size3', 'Peak']] = params_fit_pf[['s1', 's2', 's3', 'A']]
-    outcat_record[['theta']] = (params_fit_pf[['theta']] / np.pi * 180) % 180
+    outcat_record[['Cen1', 'Cen2', 'Cen3', 'Peak', 'success', 'cost']] = params_fit_pf[
+        ['x0', 'y0', 'v0', 'A', 'success', 'cost']]
+    outcat_record[['Size1', 'Size2', 'Size3']] = params_fit_pf[['s1', 's2', 's3']] * 2.3548
+
+    outcat_record['theta'] = np.rad2deg(params_fit_pf['theta'].values)
     outcat_record[['Sum']] = clumps_sum
     outcat_record_order = ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'theta',
-                           'Peak', 'Sum']
+                           'Peak', 'Sum', 'success', 'cost']
     outcat_record = outcat_record[outcat_record_order]
 
     return outcat_record
 
 
 def get_fit_outcat_record_2d(p_fit_single_clump):
-
     col_num = 11  # 核表参数的列数
     param_num = 6  # 一个二维高斯的参数个数(A0, x0, y0, s0_1,s0_2, theta_0)
     # p_fit_single_clump[5] = (p_fit_single_clump[5] / np.pi * 180) % 180
@@ -101,7 +118,7 @@ def get_fit_outcat_record_2d(p_fit_single_clump):
         p_fit_single_clump_ = p_fit_single_clump[para_item * param_num: para_item * param_num + param_num]
         # print(p_fit_single_clump_)
         # [ 1.58 46.93 11.70  2.29  2.86 31.374  80.75  4.363]
-        func = sympy_fit_gauss.gauss_2d_A(p_fit_single_clump_)
+        func = multi_gauss_fitting.gauss_2d_A(p_fit_single_clump_)
         try:
             Sum_ = integrate.nquad(func, [[1, 800], [1, 800]])
         except Warning:
@@ -143,13 +160,13 @@ def get_fit_outcat(origin_data_name, mask_name, outcat_name):
     print('The overlapping clumps are selected.')
 
     [data_x, data_y, data_v] = data.shape
-    Xin, Yin, Vin = np.mgrid[1:data_x+1, 1:data_y+1, 1:data_v+1]
+    Xin, Yin, Vin = np.mgrid[1:data_x + 1, 1:data_y + 1, 1:data_v + 1]
     X = np.vstack([Vin.flatten(), Yin.flatten(), Xin.flatten()]).T  # 坐标原点为1
     mask_flatten = mask.flatten()
     Y = data.flatten()
     fit_outcat = np.zeros([f_outcat.shape[0], 14])
     params_init = np.array([f_outcat['Peak'], f_outcat['Cen1'], f_outcat['Cen2'], f_outcat['Size1'] / 2.3548,
-                           f_outcat['Size2'] / 2.3548, f_outcat['ID'], f_outcat['Cen3'], f_outcat['Size3'] / 2.3548]).T
+                            f_outcat['Size2'] / 2.3548, f_outcat['ID'], f_outcat['Cen3'], f_outcat['Size3'] / 2.3548]).T
     params_init[:, 5] = 0  # 初始化的角度
 
     print('The initial parameters have finished')
@@ -167,18 +184,18 @@ def get_fit_outcat(origin_data_name, mask_name, outcat_name):
 
             XX2 = np.vstack([XX2, X2])
             YY2 = np.hstack([YY2, Y2])
-            params = np.hstack([params, params_init[id_clumps_index-1]])
+            params = np.hstack([params, params_init[id_clumps_index - 1]])
 
         XX2 = XX2[1:, :]
         YY2 = YY2[1:]
         params = params[1:]
-        p_fit_single_clump = sympy_fit_gauss.fit_gauss_3d(XX2, YY2, params)
+        p_fit_single_clump = multi_gauss_fitting.fit_gauss_3d(XX2, YY2, params)
         # 对于多高斯参数  需解析 p_fit_single_clump
         outcat_record = get_fit_outcat_record(p_fit_single_clump)
         for i, id_clumps in enumerate(item_tcr):
             # 这里有可能会存在多个核同时拟合的时候，输入核的编号和拟合结果中核编号不一致，从而和mask不匹配的情况
             outcat_record[i, 0] = id_clumps  # 对云核的编号进行赋值
-        fit_outcat[item_tcr-1, :] = outcat_record
+        fit_outcat[item_tcr - 1, :] = outcat_record
 
     table_title = ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'theta', 'Peak',
                    'Sum', 'Volume']
@@ -197,44 +214,53 @@ def get_fit_outcat_new(points_path, outcat_name):
     :param outcat_name: 检测得到的核表
     :return:
         拟合核表 DataFrame格式
-['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'theta', 'Peak', 'Sum', 'Volume']
+['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'theta', 'Peak', 'Sum']
     """
     print('processing file->%s' % outcat_name)
     f_outcat = pd.read_csv(outcat_name, sep='\t')
 
-    touch_clump_record = touch_clump.connect_clump(f_outcat, mult=1)  # 得到相互重叠的云核
+    # 得到相互重叠的云核
+    touch_clump_record = touch_clump.connect_clump(f_outcat, mult=1)
     print('The overlapping clumps are selected.')
 
     fit_outcat = pd.DataFrame()
     params_init = np.array([f_outcat['Peak'], f_outcat['Cen1'], f_outcat['Cen2'], f_outcat['Size1'] / 2.3548,
-                           f_outcat['Size2'] / 2.3548, f_outcat['ID'], f_outcat['Cen3'], f_outcat['Size3'] / 2.3548]).T
+                            f_outcat['Size2'] / 2.3548, f_outcat['ID'], f_outcat['Cen3'], f_outcat['Size3'] / 2.3548]).T
     params_init[:, 5] = 0  # 初始化的角度
     columns_name = ['A', 'x0', 'y0', 's1', 's2', 'theta', 'v0', 's3']
     params_init = pd.DataFrame(params_init, columns=columns_name)
+    print('The initial parameters (Initial guess) have finished')
 
-    print('The initial parameters have finished')
     for i, item_tcr in enumerate(touch_clump_record):
         # item_tcr = touch_clump_record[0]
+        # print(item_tcr)
         print(time.ctime() + 'touch_clump %d/%d' % (i, len(touch_clump_record)))
         params = params_init.loc[item_tcr - 1]
-        points_all = pd.DataFrame([])
-        clumps_id = f_outcat['ID'].loc[item_tcr - 1].values.astype(np.int64)
+
+        points_all_ = np.array([])
+        clumps_id = f_outcat.iloc[item_tcr - 1]['ID'].values.astype(np.int64)
         for id_clumps_index in clumps_id:
+            # params = params_init.loc[item_tcr[0] - 1]
+            # print(id_clumps_index)
             clump_id_path = os.path.join(points_path, 'clump_id_xyz_intensity_%04d.csv' % id_clumps_index)
             xyv_intensity = pd.read_csv(clump_id_path)
-            points_all = pd.concat([points_all, xyv_intensity], axis=0)
+            points_all_ = np.vstack([points_all_, xyv_intensity])
 
-        params_fit_pf = sympy_fit_gauss.fit_gauss_3d_new(points_all, params)
+        points_all = pd.DataFrame(points_all_)
+
+        print('Solving a nonlinear least-squares problem to find parameters.')
+        params_fit_pf = multi_gauss_fitting.fit_gauss_3d_new(points_all, params)
+
         # 对于多高斯参数  需解析 p_fit_single_clump
-        outcat_record = get_fit_outcat_record_new(params_fit_pf)
         # 这里有可能会存在多个核同时拟合的时候，输入核的编号和拟合结果中核编号不一致，从而和mask不匹配的情况
         # 对云核的编号进行赋值
+        outcat_record = get_fit_outcat_record_new(params_fit_pf)
+
         outcat_record['ID'] = clumps_id
         fit_outcat = pd.concat([fit_outcat, outcat_record], axis=0)
 
     fit_outcat = fit_outcat.round({'ID': 0, 'Peak1': 3, 'Peak2': 3, 'Peak3': 3, 'Cen1': 3, 'Cen2': 3, 'Cen3': 3,
-                                 'Size1': 3, 'Size2': 3, 'Size3': 3, 'theta': 3, 'Peak': 3, 'Sum': 3, 'Volume': 3})
-    # dataframe.to_csv(fit_outcat_name, sep='\t', index=False)
+                                   'Size1': 3, 'Size2': 3, 'Size3': 3, 'theta': 3, 'Peak': 3, 'Sum': 3})
     return fit_outcat
 
 
@@ -266,7 +292,8 @@ def fit_pool():
             fit_outcat_name = os.path.join(fit_save_outcat, 'Fit_%03d.txt' % item_clump)
             print('fitting the file: %s' % out_fits_name)
 
-            p.apply_async(get_fit_outcat, args=(out_fits_name, detected_mask_name, detected_outcat_name, fit_outcat_name))
+            p.apply_async(get_fit_outcat,
+                          args=(out_fits_name, detected_mask_name, detected_outcat_name, fit_outcat_name))
             # get_fit_outcat(data, mask, f_outcat, fit_outcat_name)
 
         p.close()
@@ -304,7 +331,6 @@ def get_save_clumps_xyv(origin_data_name, mask_name, outcat_name, save_path):
         clump_item_df.to_csv(clump_item_name, index=False)
 
 
-
 if __name__ == '__main__':
     # fit_pool()
 
@@ -316,7 +342,7 @@ if __name__ == '__main__':
     # fit_outcat = get_fit_outcat(origin_data_name, mask_name, outcat_name)
     fit_outcat = get_fit_outcat_new(save_path, outcat_name)
     # get_clumps_xyv(origin_data_name, mask_name, outcat_name, save_path)
+    fit_outcat.to_csv('fit_all11.csv')
 
-
-
-
+    # data = pd.read_csv(r'F:\ZHSZNS\data\data.xlsx')
+    # data.to_csv(r'F:\ZHSZNS\data\data.csv')
