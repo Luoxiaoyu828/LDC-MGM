@@ -45,53 +45,6 @@ def get_fit_outcat_record(p_fit_single_clump):
     return outcat_record
 
 
-def get_fit_outcat_record_new(params_fit_pf):
-    """
-    对拟合的结果进行整理得到拟合云核核表
-    :param params_fit_pf: 拟合数据结果，pandas.DataFrame
-    :return:
-        整理的拟合核表
-    'ID': 分子云核编号
-    'Peak1','Peak2', 'Peak3': 峰值位置坐标
-    'Cen1', 'Cen2', 'Cen3': 质心位置坐标
-    'Size1', 'Size2', 'Size3': 云核的轴长[FWHM=2.3548*sigma]
-    'theta': 云核在银经银纬面上的旋转角
-    'Peak': 云核的峰值
-    'Sum': 云核的总流量
-    'success': 拟合是否成功
-    'cost': 拟合函数和实际数据间的误差
-    """
-
-    gauss_num = params_fit_pf.shape[0]  # 三维高斯成分个数
-    outcat_record = pd.DataFrame([])
-    clumps_sum = np.zeros([gauss_num, 1])
-    for i, item in enumerate(params_fit_pf.values):
-        pfsc = item[:8]
-        pfsc_1 = params_fit_pf.iloc[i]
-        func = multi_gauss_fitting.get_multi_gauss_func_by_params(pfsc)
-
-        x_lim = [pfsc_1['x0'] - 10 * pfsc_1['s1'], pfsc_1['x0'] + 10 * pfsc_1['s1']]
-        y_lim = [pfsc_1['y0'] - 10 * pfsc_1['s2'], pfsc_1['y0'] + 10 * pfsc_1['s2']]
-        v_lim = [pfsc_1['v0'] - 10 * pfsc_1['s3'], pfsc_1['v0'] + 10 * pfsc_1['s3']]
-
-        integrate_result = integrate.nquad(func, [x_lim, y_lim, v_lim])
-        clumps_sum[i, 0] = integrate_result[0]
-
-    outcat_record['ID'] = np.array([i for i in range(gauss_num)])
-    outcat_record[['Peak1', 'Peak2', 'Peak3']] = params_fit_pf[['x0', 'y0', 'v0']]
-    outcat_record[['Cen1', 'Cen2', 'Cen3', 'Peak', 'success', 'cost']] = params_fit_pf[
-        ['x0', 'y0', 'v0', 'A', 'success', 'cost']]
-    outcat_record[['Size1', 'Size2', 'Size3']] = params_fit_pf[['s1', 's2', 's3']] * 2.3548
-
-    outcat_record['theta'] = np.rad2deg(params_fit_pf['theta'].values)
-    outcat_record[['Sum']] = clumps_sum
-    outcat_record_order = ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'theta',
-                           'Peak', 'Sum', 'success', 'cost']
-    outcat_record = outcat_record[outcat_record_order]
-
-    return outcat_record
-
-
 def get_fit_outcat_record_2d(p_fit_single_clump):
     col_num = 11  # 核表参数的列数
     param_num = 6  # 一个二维高斯的参数个数(A0, x0, y0, s0_1,s0_2, theta_0)
