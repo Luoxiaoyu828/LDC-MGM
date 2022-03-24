@@ -4,8 +4,9 @@ from matplotlib import pyplot as plt
 from scipy import optimize
 from sympy import symbols, lambdify, exp, sin, cos
 
+
 """
-多高斯拟合 2021/09/16
+多高斯拟合 2022/03/24
 """
 
 
@@ -78,45 +79,19 @@ def errorfunc(p, X, Y):
     return errorfunction
 
 
-def fit_gauss_3d(X, Y, params):
-    """
-    :param X: 坐标系 (x,y,v)
-    :param Y: 实际值 data(x,y,v)
-    :param params: 模型的初始猜想值
-    :return:
-        返回模型的拟合值
-        [A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3, ..., An, xn, yn, sn_1, sn_2,theta_n,vn, sn_3]
-    """
-    power = 4
-    gauss_3d_func = get_multi_gauss_func_by_params(params)
-    gauss_3d_value = gauss_3d_func(X[:, 0], X[:, 1], X[:, 2])
-    weight = gauss_3d_value ** power / ((gauss_3d_value ** power).sum()) # 创建拟合的权重
-    # weight = np.ones_like(weight)
-    errorfunction = lambda p: np.ravel((get_multi_gauss_func_by_params(p)(X[:, 0], X[:, 1], X[:, 2]) - Y) * weight)
-    p, success = optimize.leastsq(errorfunction, x0=params)
-    # res_robust = least_squares(errorfunction,x0=params_init,loss='soft_l1',args=(X, Y))
-    # print(res_robust)
-    param_num = 8  # 一个二维高斯的参数个数(A0, x0, y0, s0_1,s0_2, theta_0)
-    num = params.shape[0]  # 输入猜想的参数个数
-    num_j = num // param_num  # 对输入参数取整， 得到二维高斯的个数
-    for i in range(num_j):
-        p[i*param_num + 5] = (p[i*param_num + 5] / np.pi * 180) % 180
-    return p
-
-
 def get_multi_gauss_func_by_params(A):
     """
-    三维多高斯模型
+    2/3维多高斯模型
     根据传入的参数，实现动态确定多高斯模型的表达式
-    :param A:
-        [A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3, ..., An, xn, yn, sn_1, sn_2,theta_n,vn, sn_3]
+    :param A: pandas.DataFrame
+        [A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3,
+                          ...
+         An, xn, yn, sn_1, sn_2,theta_n,vn, sn_3]
     :return:
         多高斯模型的函数表达式 <class 'function'>
     """
-    # A = np.array([A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3, A1, x1, y1, s1_1, s1_2,theta_1,v1, s1_3])
-    param_num = 8  # 一个三维高斯的参数个数(A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3)
-    num = A.shape[0]  # 输入的参数个数
-    gauss_num = num // param_num  # 对输入参数取整， 得到三维高斯的个数
+
+    gauss_num, param_num = A.shape  # 高斯成分的个数, 一个高斯成分的参数个数 (A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3)
 
     paras = []
     x = symbols('x')
@@ -127,18 +102,28 @@ def get_multi_gauss_func_by_params(A):
     paras.append(v)
 
     express1 = ''
+    gauss_3d_str = ' + A[%d*8+0] * exp(-((x - A[%d*8+1]) ** 2 * (cos(A[%d*8+5])**2 / (2 * A[%d*8+3]**2) + sin(A[%d*8+5])**2 / (2 * A[%d*8+4]**2)) + (y - A[%d*8+2])**2 * (sin(A[%d*8+5])**2 / (2 * A[%d*8+3]**2) + cos(A[%d*8+5])**2 / (2 * A[%d*8+4]**2)) + (sin(2*A[%d*8+5]) / (2 * A[%d*8+4] ** 2) - sin(2*A[%d*8+5]) / (2 * A[%d*8+3] ** 2)) * (x - A[%d*8+1]) * (y - A[%d*8+2]) + (v - A[%d*8+6]) ** 2 / (2 * A[%d*8+7]**2) ))'
+    gauss_2d_str = ' + A[%d*6+0] * exp(-((x - A[%d*6+1]) ** 2 * (cos(A[%d*6+5])**2 / (2 * A[%d*6+3]**2) + sin(A[%d*6+5])**2 / (2 * A[%d*6+4]**2)) + (y - A[%d*6+2])**2 * (sin(A[%d*6+5])**2 / (2 * A[%d*6+3]**2) + cos(A[%d*6+5])**2 / (2 * A[%d*6+4]**2)) + (sin(2*A[%d*6+5]) / (2 * A[%d*6+4] ** 2) - sin(2*A[%d*6+5]) / (2 * A[%d*6+3] ** 2)) * (x - A[%d*6+1]) * (y - A[%d*6+2]) ))'
+    if param_num == 6:
+        gauss_str = gauss_2d_str
+        paras = paras[:2]
+    elif param_num == 8:
+        gauss_str = gauss_3d_str
+    else:
+        print('only fitting 2d or 3d gauss!')
+        return
     for gauss_i in range(gauss_num):
-        temp = ' + A[%d*8+0] * exp(-((x - A[%d*8+1]) ** 2 * (cos(A[%d*8+5])**2 / (2 * A[%d*8+3]**2) + sin(A[%d*8+5])**2 / (2 * A[%d*8+4]**2)) + (y - A[%d*8+2])**2 * (sin(A[%d*8+5])**2 / (2 * A[%d*8+3]**2) + cos(A[%d*8+5])**2 / (2 * A[%d*8+4]**2)) + (sin(2*A[%d*8+5]) / (2 * A[%d*8+4] ** 2) - sin(2*A[%d*8+5]) / (2 * A[%d*8+3] ** 2)) * (x - A[%d*8+1]) * (y - A[%d*8+2]) + (v - A[%d*8+6]) ** 2 / (2 * A[%d*8+7]**2) ))' \
-               % (gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i,
-                  gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i)
+        temp = gauss_str % (
+        gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i,
+        gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i)
         express1 += temp
 
     express = express1[2:]
     express = express.replace(' ', '')
-    gauss_3d_str = eval(express)  # <class 'sympy.core.mul.Mul'>
+    gauss_str_func = eval(express)  # <class 'sympy.core.mul.Mul'>
 
-    gauss_3d_func = lambdify(paras, gauss_3d_str, 'numpy')
-    return gauss_3d_func
+    gauss_multi_func = lambdify(paras, gauss_str_func, 'numpy')
+    return gauss_multi_func
 
 
 def get_multi_gauss_params(points_all, params_init):
@@ -157,7 +142,7 @@ def get_multi_gauss_params(points_all, params_init):
     param_num = 8  # 一个三维高斯的参数个数(A0, x0, y0, s0_1,s0_2, theta_0)
     columns_name = [item for item in params_init.keys().values]
     # columns_name = ['A', 'x0', 'y0', 's1', 's2', 'theta', 'v0', 's3']
-    params_init = params_init.values.flatten()
+    params_init_flatten = params_init.values.flatten()
 
     gauss_num = params_init.shape[0] // param_num  # 对输入参数取整， 得到三维高斯的个数
     # print(params_init.shape)
@@ -179,7 +164,7 @@ def get_multi_gauss_params(points_all, params_init):
     [low_.extend([0, 20, 20, 0, 0, 0, 0, 0]) for _ in range(gauss_num)]
     [up_.extend([20, 100, 100, 20, 20, 7, 2400, 40]) for _ in range(gauss_num)]
 
-    res_robust = optimize.least_squares(errorfunction, x0=params_init, loss='soft_l1', bounds=[low_, up_])
+    res_robust = optimize.least_squares(errorfunction, x0=params_init_flatten, loss='soft_l1', bounds=[low_, up_])
     params_fit = res_robust.x
     success = res_robust['success']
     cost = res_robust['cost']

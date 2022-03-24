@@ -20,13 +20,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a0956c1d-525c-4747-93f0-f98d3dd678ce" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/fit_clump_function/multi_gauss_fitting_new.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tools/ultil_lxy.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fit_clump_function/connect_clump.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/fit_clump_function/sympy_fit_gauss.py" beforeDir="false" afterPath="$PROJECT_DIR$/fit_clump_function/multi_gauss_fitting.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fit_clump_function/touch_clump.py" beforeDir="false" afterPath="$PROJECT_DIR$/fit_clump_function/touch_clump.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fit_clump_function/multi_gauss_fitting.py" beforeDir="false" afterPath="$PROJECT_DIR$/fit_clump_function/multi_gauss_fitting.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main_fit_gauss_3d.py" beforeDir="false" afterPath="$PROJECT_DIR$/main_fit_gauss_3d.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tools/show_clumps.py" beforeDir="false" afterPath="$PROJECT_DIR$/tools/show_clumps.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -57,7 +55,7 @@
     <property name="WebServerToolWindowPanel.toolwindow.show.date" value="false" />
     <property name="WebServerToolWindowPanel.toolwindow.show.permissions" value="false" />
     <property name="WebServerToolWindowPanel.toolwindow.show.size" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../../LDC_python/mnist3D_CNN-master" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/fit_clump_function" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
@@ -67,6 +65,7 @@
       <recent name="F:\Parameter_reduction\LDC\0170+010_L\simulate_data\points" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="F:\Parameter_reduction\LDC\fit_clump_function" />
       <recent name="F:\Parameter_reduction\LDC" />
     </key>
   </component>
@@ -181,7 +180,7 @@
       <workItem from="1647568193685" duration="779000" />
       <workItem from="1647589686926" duration="5422000" />
       <workItem from="1647675892862" duration="17410000" />
-      <workItem from="1647928408331" duration="12476000" />
+      <workItem from="1647928408331" duration="23284000" />
     </task>
     <servers />
   </component>
@@ -259,7 +258,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/main_fit_gauss_3d.py</url>
-          <line>42</line>
+          <line>30</line>
           <option name="timeStamp" value="4" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">

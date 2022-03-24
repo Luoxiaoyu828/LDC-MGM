@@ -6,32 +6,20 @@ from scipy import integrate
 import pandas as pd
 from fit_clump_function import multi_gauss_fitting, touch_clump
 from multiprocessing import Pool
-
-
-def create_folder(path):
-    """
-    创建文件夹
-    :param path:
-    :return:
-    """
-    if not os.path.exists(path):
-        os.mkdir(path)
-        print(path + 'created successfully!')
+from tools.ultil_lxy import create_folder
 
 
 def get_fit_outcat_record(p_fit_single_clump):
-    # p_fit_single_clump[5] = (p_fit_single_clump[5] / np.pi * 180) % 180
-    # 将弧度转换成角度, 并将其转换到0-180度
 
     param_num = 8  # 一个二维高斯的参数个数(A0, x0, y0, s0_1,s0_2, theta_0)
     num = p_fit_single_clump.shape[0]  # 拟合结果中参数个数
-    num_j = num // param_num  # 对输入参数取整， 得到二维高斯的个数
-    outcat_record = np.zeros([num_j, 14], np.float)
+    gauss_num = num // param_num  # 对输入参数取整， 得到二维高斯的个数
+    outcat_record = np.zeros([gauss_num, 14], np.float64)
 
-    for para_item in range(num_j):
+    for para_item in range(gauss_num):
         p_fit_single_clump_ = p_fit_single_clump[para_item * param_num: (para_item + 1) * param_num]
 
-        func = multi_gauss_fitting.get_gauss_3d_func_by_paras(p_fit_single_clump_)
+        func = multi_gauss_fitting.get_multi_gauss_func_by_params(p_fit_single_clump_)
         try:
             integrate_result = integrate.nquad(func, [[0, 120], [0, 120], [1, 2411]])
             Sum_ = integrate_result[0]
@@ -59,7 +47,7 @@ def get_fit_outcat_record(p_fit_single_clump):
 
 def get_fit_outcat_record_new(params_fit_pf):
     """
-
+    对拟合的结果进行整理得到拟合云核核表
     :param params_fit_pf: 拟合数据结果，pandas.DataFrame
     :return:
         整理的拟合核表
@@ -80,7 +68,7 @@ def get_fit_outcat_record_new(params_fit_pf):
     for i, item in enumerate(params_fit_pf.values):
         pfsc = item[:8]
         pfsc_1 = params_fit_pf.iloc[i]
-        func = multi_gauss_fitting.get_gauss_3d_func_by_paras(pfsc)
+        func = multi_gauss_fitting.get_multi_gauss_func_by_params(pfsc)
 
         x_lim = [pfsc_1['x0'] - 10 * pfsc_1['s1'], pfsc_1['x0'] + 10 * pfsc_1['s1']]
         y_lim = [pfsc_1['y0'] - 10 * pfsc_1['s2'], pfsc_1['y0'] + 10 * pfsc_1['s2']]
@@ -240,7 +228,7 @@ def get_fit_outcat_new(points_path, outcat_name):
         points_all_ = np.array([])
         clumps_id = f_outcat.iloc[item_tcr - 1]['ID'].values.astype(np.int64)
         for id_clumps_index in clumps_id:
-            # params = params_init.loc[item_tcr[0] - 1]
+            # params_init = params_init.loc[item_tcr[0] - 1]
             # print(id_clumps_index)
             clump_id_path = os.path.join(points_path, 'clump_id_xyz_intensity_%04d.csv' % id_clumps_index)
             xyv_intensity = pd.read_csv(clump_id_path)
@@ -249,7 +237,7 @@ def get_fit_outcat_new(points_path, outcat_name):
         points_all = pd.DataFrame(points_all_)
 
         print('Solving a nonlinear least-squares problem to find parameters.')
-        params_fit_pf = multi_gauss_fitting.fit_gauss_3d_new(points_all, params)
+        params_fit_pf = multi_gauss_fitting.get_multi_gauss_params(points_all, params)
 
         # 对于多高斯参数  需解析 p_fit_single_clump
         # 这里有可能会存在多个核同时拟合的时候，输入核的编号和拟合结果中核编号不一致，从而和mask不匹配的情况
