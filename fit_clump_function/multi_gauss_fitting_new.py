@@ -1,4 +1,5 @@
 import numpy as np
+import time
 import pandas as pd
 from scipy import optimize
 from scipy import integrate
@@ -66,7 +67,7 @@ def get_multi_gauss_func_by_params(params_init, ndim=3):
     return gauss_multi_func
 
 
-def get_multi_gauss_params(points_all, params_init, ndim=3):
+def fitting_multi_gauss_params(points_all, params_init, ndim=3):
     """
     根据数据点，初始化参数，对模型进行拟合，返回拟合参数
 
@@ -87,8 +88,20 @@ def get_multi_gauss_params(points_all, params_init, ndim=3):
         An, xn, yn, sn_1, sn_2,theta_n,vn, sn_3，success_n, cost_n]
 
          其中: theta为弧度值,success_n表示拟合是否成功
+    scipy.optimize.least_squares(fun, x0, jac='2-point', bounds=(- inf, inf), method='trf', ftol=1e-08, xtol=1e-08,
+        gtol=1e-08, x_scale=1.0, loss='linear', f_scale=1.0, diff_step=None, tr_solver=None, tr_options={},
+        jac_sparsity=None, max_nfev=None, verbose=0, args=(), kwargs={})
+
+         f_scalefloat, optional
+            Value of soft margin between inlier and outlier residuals, default is 1.0.
+            The loss function is evaluated as follows rho_(f**2) = C**2 * rho(f**2 / C**2),
+            where C is f_scale, and rho is determined by loss parameter.
+            This parameter has no effect with loss='linear', but for other loss values it is of crucial importance.
     """
-    power = 1
+    if params_init.ndim != 1:
+        print('The shape of params_init must be 1*m.')
+        return None
+    power = 4
     gauss_multi_func = get_multi_gauss_func_by_params(params_init, ndim=ndim)
     low_ = []
     up_ = []
@@ -122,7 +135,7 @@ def get_multi_gauss_params(points_all, params_init, ndim=3):
         return
 
     gauss_num = params_init.shape[0] // param_num
-    res_robust = optimize.least_squares(errorfunc, x0=params_init, loss='soft_l1', bounds=[low_, up_])
+    res_robust = optimize.least_squares(errorfunc, x0=params_init, loss='soft_l1', bounds=[low_, up_], f_scale=0.1)
     params_fit = res_robust.x
     success = res_robust['success']
     cost = res_robust['cost']
@@ -162,6 +175,9 @@ def get_fit_outcat_df(params_fit_pf):
     'success': 拟合是否成功
     'cost': 拟合函数和实际数据间的误差
     """
+    if not isinstance(params_fit_pf, pd.core.frame.DataFrame):
+        print('the params_fit_pf type must be pandas.DataFrame.')
+        return
 
     clumps_num, params_num = params_fit_pf.shape  # 分子云核个数, 参数个数
     outcat_record = pd.DataFrame([])
@@ -210,7 +226,7 @@ def get_fit_outcat_df(params_fit_pf):
 
     outcat_record['ID'] = np.array([i for i in range(clumps_num)])
     outcat_record[['Peak', 'success', 'cost']] = params_fit_pf[['A', 'success', 'cost']]
-    outcat_record['theta'] = np.rad2deg(params_fit_pf['theta'].values)
+    outcat_record['theta'] = np.rad2deg(params_fit_pf['theta'].values) % 180    # 求得的角度需要用180取余
     outcat_record[['Sum']] = clumps_sum
     outcat_record[Peak_item] = params_fit_pf[xyv_0]
     outcat_record[Cen_item] = params_fit_pf[xyv_0]
@@ -219,6 +235,41 @@ def get_fit_outcat_df(params_fit_pf):
     outcat_record = outcat_record[outcat_record_order]
 
     return outcat_record
+
+
+def fitting_main(points_all, params_init, fit_outcat_path, ndim=3):
+    """
+    多高斯拟合的主函数，保存拟合的结果
+    :param points_all: [m*4 pandas.DataFrame] [x,y,v,I]
+    :param params_init: [1*m ndarray]
+        [A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3, ..., An, xn, yn, sn_1, sn_2,theta_n,vn, sn_3]
+        LDC算法计算的3维高斯模型的初始猜想值
+    :param fit_outcat_path: [str] 拟合核表的保存位置
+    :param ndim: 高斯模型的维数
+    :return:
+        None
+    """
+    if fit_outcat_path.split('.')[-1] not in ['csv', 'txt']:
+        print('the save file type must be one of *.csv and *.txt.')
+        return
+
+    if not isinstance(points_all, pd.core.frame.DataFrame):
+        print('the points_all type must be pandas.DataFrame.')
+        return
+
+    if not isinstance(params_init, np.ndarray):
+        print('the params_init type must be ndarray.')
+        return
+
+    print(time.ctime() + ': fitting ...')
+    params_fit_df = fitting_multi_gauss_params(points_all, params_init, ndim=ndim)
+
+    print(time.ctime() + ': fitting over, get outcat record.')
+    outcat_record = get_fit_outcat_df(params_fit_df)
+
+    if isinstance(outcat_record, pd.core.frame.DataFrame):
+        outcat_record.to_csv(fit_outcat_path, index=False, sep='\t')
+        print(time.ctime() + ': outcat record saved success')
 
 
 if __name__ == '__main__':
