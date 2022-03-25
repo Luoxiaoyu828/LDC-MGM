@@ -45,5 +45,6 @@ def get_save_clumps_xyv(origin_data_name, mask_name, outcat_name, save_path):
 
         clump_item_df.to_csv(clump_item_name, index=False)
 
+
 if __name__ == '__main__':
     pass
