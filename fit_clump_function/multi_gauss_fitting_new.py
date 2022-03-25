@@ -4,13 +4,12 @@ from scipy import optimize
 from scipy import integrate
 from sympy import symbols, lambdify, exp, sin, cos
 
-
 """
 多高斯拟合 2022/03/24
 """
 
 
-def errorfunc(params, X, Y):
+def error_func(params, X, Y):
     power = 1
     gauss_3d_func = get_multi_gauss_func_by_params(params)
     gauss_3d_value = gauss_3d_func(X[:, 0], X[:, 1], X[:, 2])
@@ -22,9 +21,11 @@ def errorfunc(params, X, Y):
 
 def get_multi_gauss_func_by_params(params_init, ndim=3):
     """
-    2/3维多高斯模型
+    根据传入的初始参数，构建2/3维多高斯模型的函数表达式
     根据传入的参数，实现动态确定多高斯模型的表达式
-    :param A: 1*m ndarray
+
+    :param ndim: 高斯模型的维数
+    :param params_init: A: 1*m ndarray
         三维多高斯模型
         [A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3, ..., An, xn, yn, sn_1, sn_2,theta_n,vn, sn_3]
         二维多高斯模型
@@ -40,21 +41,21 @@ def get_multi_gauss_func_by_params(params_init, ndim=3):
     paras = [x, y, v]
 
     if ndim == 2:
-        param_num = 6      # 一个2d高斯成分的参数个数 (A0, x0, y0, s0_1,s0_2, theta_0)
+        param_num = 6  # 一个2d高斯成分的参数个数 (A0, x0, y0, s0_1,s0_2, theta_0)
         gauss_str = gauss_2d_str
         paras = paras[:2]
     elif ndim == 3:
-        param_num = 8       # 一个3d高斯成分的参数个数 (A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3)
+        param_num = 8  # 一个3d高斯成分的参数个数 (A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3)
         gauss_str = gauss_3d_str
     else:
         print('only fitting 2d or 3d gauss!')
         return
-    gauss_num = params_init.shape[0] // param_num   # 高斯成分的个数
+    gauss_num = params_init.shape[0] // param_num  # 高斯成分的个数
     express1 = ''
     for gauss_i in range(gauss_num):
         temp = gauss_str % (
-        gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i,
-        gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i)
+            gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i,
+            gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i)
         express1 += temp
 
     express = express1[2:]
@@ -67,6 +68,9 @@ def get_multi_gauss_func_by_params(params_init, ndim=3):
 
 def get_multi_gauss_params(points_all, params_init, ndim=3):
     """
+    根据数据点，初始化参数，对模型进行拟合，返回拟合参数
+
+    :param ndim: 高斯模型的维数
     :param points_all: [x, y, v, intensity]
     :param params_init: 1*m ndarray
         [A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3, ..., An, xn, yn, sn_1, sn_2,theta_n,vn, sn_3]
@@ -97,7 +101,7 @@ def get_multi_gauss_params(points_all, params_init, ndim=3):
         gauss_multi_value = gauss_multi_func(X, Y)
         Intensity = points_all['Intensity'].values
         weight = gauss_multi_value ** power / ((gauss_multi_value ** power).sum())  # 创建拟合的权重
-        errorfunction = lambda p: np.ravel((get_multi_gauss_func_by_params(p, ndim=2)(X, Y) - Intensity) * weight)
+        errorfunc = lambda p: np.ravel((get_multi_gauss_func_by_params(p, ndim=2)(X, Y) - Intensity) * weight)
         [low_.extend([0, 20, 20, 0, 0, 0]) for _ in range(gauss_num)]
         [up_.extend([20, 100, 100, 20, 20, 7]) for _ in range(gauss_num)]
     elif ndim == 3:
@@ -110,7 +114,7 @@ def get_multi_gauss_params(points_all, params_init, ndim=3):
         gauss_multi_value = gauss_multi_func(X, Y, V)
         Intensity = points_all['Intensity'].values
         weight = gauss_multi_value ** power / ((gauss_multi_value ** power).sum())  # 创建拟合的权重
-        errorfunction = lambda p: np.ravel((get_multi_gauss_func_by_params(p, ndim=3)(X, Y, V) - Intensity) * weight)
+        errorfunc = lambda p: np.ravel((get_multi_gauss_func_by_params(p, ndim=3)(X, Y, V) - Intensity) * weight)
         [low_.extend([0, 20, 20, 0, 0, 0, 0, 0]) for _ in range(gauss_num)]
         [up_.extend([20, 100, 100, 20, 20, 7, 2400, 40]) for _ in range(gauss_num)]
     else:
@@ -118,7 +122,7 @@ def get_multi_gauss_params(points_all, params_init, ndim=3):
         return
 
     gauss_num = params_init.shape[0] // param_num
-    res_robust = optimize.least_squares(errorfunction, x0=params_init, loss='soft_l1', bounds=[low_, up_])
+    res_robust = optimize.least_squares(errorfunc, x0=params_init, loss='soft_l1', bounds=[low_, up_])
     params_fit = res_robust.x
     success = res_robust['success']
     cost = res_robust['cost']
@@ -126,8 +130,8 @@ def get_multi_gauss_params(points_all, params_init, ndim=3):
     params_fit = params_fit.reshape([gauss_num, param_num])
     params_fit_df = pd.DataFrame(params_fit, columns=columns_name)
 
-    params_fit_df['success'] = success      # 拟合是否成功
-    params_fit_df['cost'] = cost        # 拟合的代价函数
+    params_fit_df['success'] = success  # 拟合是否成功
+    params_fit_df['cost'] = cost  # 拟合的代价函数
 
     return params_fit_df
 
@@ -211,7 +215,6 @@ def get_fit_outcat_df(params_fit_pf):
     outcat_record[Peak_item] = params_fit_pf[xyv_0]
     outcat_record[Cen_item] = params_fit_pf[xyv_0]
     outcat_record[Size_item] = params_fit_pf[s_123] * 2.3548
-
 
     outcat_record = outcat_record[outcat_record_order]
 
