@@ -20,6 +20,103 @@ def error_func(params, X, Y):
     return errorfunction
 
 
+def get_params_bound(params_init, ndim=3):
+    """
+    :param ndim: 高斯模型的维数
+    :param params_init: 1*m ndarray
+        [A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3, ..., An, xn, yn, sn_1, sn_2,theta_n,vn, sn_3]
+        LDC算法计算的3维高斯模型的初始猜想值
+    :return:
+    """
+    peak_range = 3
+    peak_low = 5 * 0.23
+    sigma_time = 1
+    s_time = 1.5
+    s_low = 1
+    low_ = []
+    up_ = []
+    if ndim == 2:
+        param_num = 6
+        gauss_num = params_init.shape[0] // param_num
+        params_init_mat = params_init.reshape([gauss_num, param_num])
+        params_init_df = pd.DataFrame(params_init_mat,
+                                      columns=['A0', 'x0', 'y0', 's0_1', 's0_2', 'theta_0'])
+        A0 = params_init_df['A0'].values
+        x0 = params_init_df['x0'].values
+        y0 = params_init_df['y0'].values
+        s0_1 = params_init_df['s0_1'].values
+        s0_2 = params_init_df['s0_2'].values
+        theta_0 = params_init_df['theta_0'].values
+
+        A0_down = np.array([A0 - peak_range, peak_low * np.ones_like(A0)]).max(axis=0)
+        A0_up = A0 + peak_range
+
+        x0_down = x0 - sigma_time * s0_1
+        x0_up = x0 + sigma_time * s0_1
+
+        y0_down = y0 - sigma_time * s0_2
+        y0_up = y0 + sigma_time * s0_2
+
+        s0_1_down = np.array([s0_1 * s_time, s_low * np.ones_like(s0_1)]).max(axis=0)
+        s0_1_up = s0_1 * (s_time - 1)
+
+        s0_2_down = np.array([s0_2 * s_time, s_low * np.ones_like(s0_2)]).max(axis=0)
+        s0_2_up = s0_2 * (s_time - 1)
+
+        theta_0_down = np.zeros_like(theta_0)
+        theta_0_up = np.zeros_like(theta_0) + 2 * np.pi
+
+        low_.extend([A0_down, x0_down, y0_down, s0_1_down, s0_2_down, theta_0_down])
+        up_.extend([A0_up, x0_up, y0_up, s0_1_up, s0_2_up, theta_0_up])
+    elif ndim == 3:
+        param_num = 8
+        gauss_num = params_init.shape[0] // param_num
+        params_init_mat = params_init.reshape([gauss_num, param_num])
+        params_init_df = pd.DataFrame(params_init_mat,
+                                      columns=['A0', 'x0', 'y0', 's0_1', 's0_2', 'theta_0', 'v0', 's0_3'])
+        A0 = params_init_df['A0'].values
+        x0 = params_init_df['x0'].values
+        y0 = params_init_df['y0'].values
+        s0_1 = params_init_df['s0_1'].values
+        s0_2 = params_init_df['s0_2'].values
+        theta_0 = params_init_df['theta_0'].values
+        v0 = params_init_df['v0'].values
+        s0_3 = params_init_df['s0_3'].values
+        #
+        A0_down = np.array([A0 - peak_range, peak_low * np.ones_like(A0)]).max(axis=0)
+        A0_up = A0 + peak_range
+
+        x0_down = x0 - sigma_time * s0_1
+        x0_up = x0 + sigma_time * s0_1
+
+        y0_down = y0 - sigma_time * s0_2
+        y0_up = y0 + sigma_time * s0_2
+
+        v0_down = v0 - sigma_time * s0_3
+        v0_up = v0 + sigma_time * s0_3
+
+        s0_1_down = np.array([s0_1 * (s_time - 1), s_low * np.ones_like(s0_1)]).min(axis=0)
+        s0_1_up = s0_1 * s_time
+
+        s0_2_down = np.array([s0_2 * (s_time - 1), s_low * np.ones_like(s0_2)]).min(axis=0)
+        s0_2_up = s0_2 * s_time
+
+        s0_3_down = np.array([s0_3 * (s_time - 1), s_low * np.ones_like(s0_3)]).min(axis=0)
+        s0_3_up = s0_3 * s_time
+
+        theta_0_down = np.zeros_like(theta_0) - 0.001
+        theta_0_up = np.zeros_like(theta_0) + 2 * np.pi
+        low_array = np.array([A0_down, x0_down, y0_down, s0_1_down, s0_2_down, theta_0_down, v0_down, s0_3_down]).T
+        up_array = np.array([A0_up, x0_up, y0_up, s0_1_up, s0_2_up, theta_0_up, v0_up, s0_3_up]).T
+
+        low_ = low_array.flatten()
+        up_ = up_array.flatten()
+    else:
+        print('only fitting 2d or 3d gauss!')
+        return
+    return low_, up_
+
+
 def get_multi_gauss_func_by_params(params_init, ndim=3):
     """
     根据传入的初始参数，构建2/3维多高斯模型的函数表达式
@@ -128,8 +225,9 @@ def fitting_multi_gauss_params(points_all, params_init, ndim=3):
         Intensity = points_all['Intensity'].values
         weight = gauss_multi_value ** power / ((gauss_multi_value ** power).sum())  # 创建拟合的权重
         errorfunc = lambda p: np.ravel((get_multi_gauss_func_by_params(p, ndim=3)(X, Y, V) - Intensity) * weight)
-        [low_.extend([0, 20, 20, 0, 0, 0, 0, 0]) for _ in range(gauss_num)]
-        [up_.extend([20, 100, 100, 20, 20, 7, 2400, 40]) for _ in range(gauss_num)]
+        low_, up_ = get_params_bound(params_init, ndim=3)
+        # [low_.extend([0, 20, 20, 0, 0, 0, 0, 0]) for _ in range(gauss_num)]
+        # [up_.extend([20, 100, 100, 20, 20, 7, 2400, 30]) for _ in range(gauss_num)]
     else:
         print('only fitting 2d or 3d gauss!')
         return
@@ -268,8 +366,10 @@ def fitting_main(points_all, params_init, fit_outcat_path, ndim=3):
     outcat_record = get_fit_outcat_df(params_fit_df)
 
     if isinstance(outcat_record, pd.core.frame.DataFrame):
+        outcat_record = outcat_record.round({'ID': 0, 'Peak1': 2, 'Peak2': 2, 'Peak3': 2, 'Cen1': 2, 'Cen2': 2, 'Cen3': 2,
+                                     'Size1': 2, 'Size2': 2, 'Size3': 2, 'theta': 2, 'Peak': 2, 'Sum': 2})
         outcat_record.to_csv(fit_outcat_path, index=False, sep='\t')
-        print(time.ctime() + ': outcat record saved success')
+        print(time.ctime() + ': outcat record saved success.\n')
 
 
 if __name__ == '__main__':
