@@ -46,5 +46,39 @@ def get_save_clumps_xyv(origin_data_name, mask_name, outcat_name, save_path):
         clump_item_df.to_csv(clump_item_name, index=False)
 
 
+def get_data_points(points_all_df):
+    """
+
+    :param points_all_df: [x,y,v,I]
+    :return: data_cube
+    """
+    pif = points_all_df[['x_2', 'y_1', 'v_0']].values
+    pif_1 = pif - pif.min(axis=0)
+    # pif_1 = pif
+
+    data = np.zeros(pif_1.max(axis=0) + 1)
+    for i, pif_ in enumerate(pif_1):
+        # print(pif_)
+        data[pif_[0], pif_[1], pif_[2]] = points_all_df['Intensity'].values[i]
+
+    return data
+
+
+def get_datacube_by_points(points_name_list):
+    """
+    根据云核的点和强度，返回局部立方体
+    :param points_name: 云核点坐标及强度文件名列表
+    :return:
+        np.array (n*m*k)
+    """
+    points_all = pd.DataFrame()
+    for points_name in points_name_list:
+        points = pd.read_csv(points_name)
+        points_all = pd.concat([points_all, points], axis=0)
+
+    data = get_data_points(points_all)
+    return data
+
+
 if __name__ == '__main__':
     pass

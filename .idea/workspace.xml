@@ -20,9 +20,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a0956c1d-525c-4747-93f0-f98d3dd678ce" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fit_clump_function/multi_gauss_fitting_new.py" beforeDir="false" afterPath="$PROJECT_DIR$/fit_clump_function/multi_gauss_fitting_new.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main_fit_gauss_3d.py" beforeDir="false" afterPath="$PROJECT_DIR$/main_fit_gauss_3d.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tools/show_clumps.py" beforeDir="false" afterPath="$PROJECT_DIR$/tools/show_clumps.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tools/ultil_lxy.py" beforeDir="false" afterPath="$PROJECT_DIR$/tools/ultil_lxy.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,15 +61,18 @@
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="F:\Parameter_reduction\LDC\0170+010_L\simulate_data\points" />
-    </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="F:\Parameter_reduction\LDC\fit_clump_function" />
       <recent name="F:\Parameter_reduction\LDC" />
     </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="F:\Parameter_reduction\LDC\0170+010_L\simulate_data" />
+      <recent name="F:\Parameter_reduction\LDC\0170+010_L" />
+      <recent name="F:\Parameter_reduction\LDC\0170+010_L\simulate_data\other" />
+      <recent name="F:\Parameter_reduction\LDC\0170+010_L\simulate_data\points" />
+    </key>
   </component>
-  <component name="RunManager" selected="Python.multi_gauss_fitting_new">
+  <component name="RunManager" selected="Python.fit_simulate_data">
     <configuration name="fit_simulate_data" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="LDC" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -135,6 +140,9 @@
       <module name="LDC" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
       <option name="SDK_HOME" value="" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/fit_clump_function" />
       <option name="IS_MODULE_SDK" value="true" />
@@ -174,11 +182,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.multi_gauss_fitting_new" />
         <item itemvalue="Python.fit_simulate_data" />
-        <item itemvalue="Python.fit_simulate_data" />
-        <item itemvalue="Python.fit_simulate_data" />
-        <item itemvalue="Python.fit_simulate_data" />
+        <item itemvalue="Python.main_fit_gauss_3d" />
+        <item itemvalue="Python.main_fit_gauss_3d" />
+        <item itemvalue="Python.main_fit_gauss_3d" />
+        <item itemvalue="Python.main_fit_gauss_3d" />
       </list>
     </recent_temporary>
   </component>
@@ -198,7 +206,8 @@
       <workItem from="1647589686926" duration="5422000" />
       <workItem from="1647675892862" duration="17410000" />
       <workItem from="1647928408331" duration="25557000" />
-      <workItem from="1648110083674" duration="7775000" />
+      <workItem from="1648110083674" duration="60500000" />
+      <workItem from="1648387856129" duration="4482000" />
     </task>
     <servers />
   </component>
@@ -222,6 +231,14 @@
       <screen x="0" y="0" width="1536" height="834" />
     </state>
     <state x="395" y="95" key="#Inspections/0.0.1536.834@0.0.1536.834" timestamp="1646126941904" />
+    <state x="499" y="163" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog" timestamp="1648187803019">
+      <screen x="0" y="0" width="1536" height="834" />
+    </state>
+    <state x="499" y="163" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/0.0.1536.834@0.0.1536.834" timestamp="1648187803019" />
+    <state width="892" height="466" key="DebuggerActiveHint" timestamp="1648280640108">
+      <screen x="0" y="0" width="1536" height="834" />
+    </state>
+    <state width="892" height="466" key="DebuggerActiveHint/0.0.1536.834@0.0.1536.834" timestamp="1648280640108" />
     <state x="504" y="0" key="Diagram.Print.Preview.Dialog" timestamp="1647935187275">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
@@ -230,42 +247,46 @@
       <screen x="0" y="0" width="1536" height="834" />
     </state>
     <state x="549" y="171" key="FileChooserDialogImpl/0.0.1536.834@0.0.1536.834" timestamp="1647936107594" />
-    <state width="1493" height="274" key="GridCell.Tab.0.bottom" timestamp="1648112189506">
+    <state width="1493" height="259" key="GridCell.Tab.0.bottom" timestamp="1648299412686">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="274" key="GridCell.Tab.0.bottom/0.0.1536.834@0.0.1536.834" timestamp="1648112189506" />
-    <state width="1493" height="274" key="GridCell.Tab.0.center" timestamp="1648112189506">
+    <state width="1493" height="259" key="GridCell.Tab.0.bottom/0.0.1536.834@0.0.1536.834" timestamp="1648299412686" />
+    <state width="1493" height="259" key="GridCell.Tab.0.center" timestamp="1648299412686">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="274" key="GridCell.Tab.0.center/0.0.1536.834@0.0.1536.834" timestamp="1648112189506" />
-    <state width="1493" height="274" key="GridCell.Tab.0.left" timestamp="1648112189506">
+    <state width="1493" height="259" key="GridCell.Tab.0.center/0.0.1536.834@0.0.1536.834" timestamp="1648299412686" />
+    <state width="1493" height="259" key="GridCell.Tab.0.left" timestamp="1648299412686">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="274" key="GridCell.Tab.0.left/0.0.1536.834@0.0.1536.834" timestamp="1648112189506" />
-    <state width="1493" height="274" key="GridCell.Tab.0.right" timestamp="1648112189506">
+    <state width="1493" height="259" key="GridCell.Tab.0.left/0.0.1536.834@0.0.1536.834" timestamp="1648299412686" />
+    <state width="1493" height="259" key="GridCell.Tab.0.right" timestamp="1648299412686">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="274" key="GridCell.Tab.0.right/0.0.1536.834@0.0.1536.834" timestamp="1648112189506" />
-    <state width="1493" height="274" key="GridCell.Tab.1.bottom" timestamp="1648112189506">
+    <state width="1493" height="259" key="GridCell.Tab.0.right/0.0.1536.834@0.0.1536.834" timestamp="1648299412686" />
+    <state width="1493" height="259" key="GridCell.Tab.1.bottom" timestamp="1648299412686">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="274" key="GridCell.Tab.1.bottom/0.0.1536.834@0.0.1536.834" timestamp="1648112189506" />
-    <state width="1493" height="274" key="GridCell.Tab.1.center" timestamp="1648112189506">
+    <state width="1493" height="259" key="GridCell.Tab.1.bottom/0.0.1536.834@0.0.1536.834" timestamp="1648299412686" />
+    <state width="1493" height="259" key="GridCell.Tab.1.center" timestamp="1648299412686">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="274" key="GridCell.Tab.1.center/0.0.1536.834@0.0.1536.834" timestamp="1648112189506" />
-    <state width="1493" height="274" key="GridCell.Tab.1.left" timestamp="1648112189506">
+    <state width="1493" height="259" key="GridCell.Tab.1.center/0.0.1536.834@0.0.1536.834" timestamp="1648299412686" />
+    <state width="1493" height="259" key="GridCell.Tab.1.left" timestamp="1648299412686">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="274" key="GridCell.Tab.1.left/0.0.1536.834@0.0.1536.834" timestamp="1648112189506" />
-    <state width="1493" height="274" key="GridCell.Tab.1.right" timestamp="1648112189506">
+    <state width="1493" height="259" key="GridCell.Tab.1.left/0.0.1536.834@0.0.1536.834" timestamp="1648299412686" />
+    <state width="1493" height="259" key="GridCell.Tab.1.right" timestamp="1648299412686">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
-    <state width="1493" height="274" key="GridCell.Tab.1.right/0.0.1536.834@0.0.1536.834" timestamp="1648112189506" />
+    <state width="1493" height="259" key="GridCell.Tab.1.right/0.0.1536.834@0.0.1536.834" timestamp="1648299412686" />
     <state x="270" y="61" key="SettingsEditor" timestamp="1646098034855">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
     <state x="270" y="61" key="SettingsEditor/0.0.1536.834@0.0.1536.834" timestamp="1646098034855" />
+    <state width="775" height="424" key="XDebugger.FullValuePopup" timestamp="1648281588651">
+      <screen x="0" y="0" width="1536" height="834" />
+    </state>
+    <state width="775" height="424" key="XDebugger.FullValuePopup/0.0.1536.834@0.0.1536.834" timestamp="1648281588651" />
     <state x="563" y="330" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1645779255379">
       <screen x="0" y="0" width="1536" height="834" />
     </state>
@@ -275,14 +296,14 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main_fit_gauss_3d.py</url>
-          <line>30</line>
-          <option name="timeStamp" value="4" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fit_clump_function/multi_gauss_fitting.py</url>
           <line>129</line>
           <option name="timeStamp" value="5" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/fit_clump_function/multi_gauss_fitting_new.py</url>
+          <line>234</line>
+          <option name="timeStamp" value="22" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -297,6 +318,6 @@
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/LDC$show_clumps.coverage" NAME="show_clumps Coverage Results" MODIFIED="1646058500490" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tools" />
     <SUITE FILE_PATH="coverage/LDC$fit_simulate_data.coverage" NAME="fit_simulate_data Coverage Results" MODIFIED="1648112106289" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/LDC$main_fit_gauss_3d.coverage" NAME="main_fit_gauss_3d Coverage Results" MODIFIED="1646224093403" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/LDC$main_fit_gauss_3d.coverage" NAME="main_fit_gauss_3d Coverage Results" MODIFIED="1648295589359" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

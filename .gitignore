@@ -5,6 +5,8 @@
 /dist/
 *.fits
 *.csv
+*.png
+
 requirements.txt
 setup.py
 README.MD
