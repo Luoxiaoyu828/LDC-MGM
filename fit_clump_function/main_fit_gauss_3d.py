@@ -1,11 +1,12 @@
 import numpy as np
 import astropy.io.fits as fits
 import os
+import shutil
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
 from fit_clump_function import multi_gauss_fitting, multi_gauss_fitting_new, touch_clump
-from tools.ultil_lxy import create_folder, get_save_clumps_xyv, get_points_by_clumps_id
+from tools.ultil_lxy import create_folder, get_points_by_clumps_id, move_csv_png, restruct_fitting_outcat
 from tools.show_clumps import display_clumps_fitting
 
 
@@ -124,16 +125,17 @@ def fitting_LDC_clumps(points_path, outcat_name):
         fig.savefig(fig_name)
         plt.close(fig)
 
-        break
+    move_csv_png(csv_png_folder)
+    restruct_fitting_outcat(csv_png_folder)
 
 
 if __name__ == '__main__':
-    outcat_name = r'0170+010_L\LDC_auto_outcat.csv'
-    outcat_name_loc = r'0170+010_L\LDC_auto_loc_outcat.csv'
-    points_path = r'0170+010_L\0170+010_L_points'
+    outcat_name = r'F:\Parameter_reduction\LDC\0170+010_L\LDC_auto_outcat.csv'
+    outcat_name_loc = r'F:\Parameter_reduction\LDC\0170+010_L\LDC_auto_loc_outcat.csv'
+    points_path = r'F:\Parameter_reduction\LDC\0170+010_L\0170+010_L_points'
 
     fitting_LDC_clumps(points_path, outcat_name_loc)
 
     outcat_name_simu = r'0170+010_L\simulate_data\gaussian_outcat_002.txt'
-    points_path = r'0170+010_L\simulate_data\points'
+    points_path = r'../0170+010_L/simulate_data/points'
     # fitting_LDC_clumps(points_path, outcat_name_simu)

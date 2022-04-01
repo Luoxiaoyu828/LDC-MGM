@@ -20,19 +20,25 @@ def error_func(params, X, Y):
     return errorfunction
 
 
-def get_params_bound(params_init, ndim=3):
+def get_params_bound(params_init, ndim=3, peak_range=3, peak_low=5*0.23, sigma_time=1, s_time=1.5, s_low=1):
     """
+    :param s_low:
+    :param s_time:
+    :param sigma_time:
+    :param peak_low:
+    :param peak_range: # 拟合时，峰值可以偏移的范围
     :param ndim: 高斯模型的维数
-    :param params_init: 1*m ndarray
+    :param params_init: 1*m nd array
+    peak_range = 3  # 拟合时，峰值可以偏移的范围
+    peak_low = 5 * 0.23     # 拟合的peak 最低值
+    sigma_time = 1      # 质心可以偏移的范围：sigma_time * sigma
+    s_time = 1.5       # sigma 偏移的倍数：[s0_1 * (s_time - 1), s0_1 * s_time]
+    s_low = 1   # sigma的最低值
         [A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3, ..., An, xn, yn, sn_1, sn_2,theta_n,vn, sn_3]
         LDC算法计算的3维高斯模型的初始猜想值
     :return:
     """
-    peak_range = 3
-    peak_low = 5 * 0.23
-    sigma_time = 1
-    s_time = 1.5
-    s_low = 1
+
     low_ = []
     up_ = []
     if ndim == 2:
@@ -217,7 +223,6 @@ def fitting_multi_gauss_params(points_all, params_init, ndim=3):
     elif ndim == 3:
         columns_name = ['A', 'x0', 'y0', 's1', 's2', 'theta', 'v0', 's3']
         param_num = 8
-        gauss_num = params_init.shape[0] // param_num
         X = points_all['x_2'].values
         Y = points_all['y_1'].values
         V = points_all['v_0'].values
@@ -226,8 +231,6 @@ def fitting_multi_gauss_params(points_all, params_init, ndim=3):
         weight = gauss_multi_value ** power / ((gauss_multi_value ** power).sum())  # 创建拟合的权重
         errorfunc = lambda p: np.ravel((get_multi_gauss_func_by_params(p, ndim=3)(X, Y, V) - Intensity) * weight)
         low_, up_ = get_params_bound(params_init, ndim=3)
-        # [low_.extend([0, 20, 20, 0, 0, 0, 0, 0]) for _ in range(gauss_num)]
-        # [up_.extend([20, 100, 100, 20, 20, 7, 2400, 30]) for _ in range(gauss_num)]
     else:
         print('only fitting 2d or 3d gauss!')
         return
@@ -335,21 +338,19 @@ def get_fit_outcat_df(params_fit_pf):
     return outcat_record
 
 
-def fitting_main(points_all, params_init, fit_outcat_path, ndim=3):
+def fitting_main(points_all, params_init, clumps_id, ndim=3):
     """
-    多高斯拟合的主函数，保存拟合的结果
+    多高斯拟合的主函数，返回拟合的结果[pandas.DataFrame]
     :param points_all: [m*4 pandas.DataFrame] [x,y,v,I]
     :param params_init: [1*m ndarray]
         [A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3, ..., An, xn, yn, sn_1, sn_2,theta_n,vn, sn_3]
         LDC算法计算的3维高斯模型的初始猜想值
-    :param fit_outcat_path: [str] 拟合核表的保存位置
+        [x0, y0, v0]: 质心
+        [s0_1, s0_2, s0_3]: sigma
     :param ndim: 高斯模型的维数
     :return:
         None
     """
-    if fit_outcat_path.split('.')[-1] not in ['csv', 'txt']:
-        print('the save file type must be one of *.csv and *.txt.')
-        return
 
     if not isinstance(points_all, pd.core.frame.DataFrame):
         print('the points_all type must be pandas.DataFrame.')
@@ -366,10 +367,12 @@ def fitting_main(points_all, params_init, fit_outcat_path, ndim=3):
     outcat_record = get_fit_outcat_df(params_fit_df)
 
     if isinstance(outcat_record, pd.core.frame.DataFrame):
+        outcat_record['ID'] = clumps_id
         outcat_record = outcat_record.round({'ID': 0, 'Peak1': 2, 'Peak2': 2, 'Peak3': 2, 'Cen1': 2, 'Cen2': 2, 'Cen3': 2,
                                      'Size1': 2, 'Size2': 2, 'Size3': 2, 'theta': 2, 'Peak': 2, 'Sum': 2})
-        outcat_record.to_csv(fit_outcat_path, index=False, sep='\t')
-        print(time.ctime() + ': outcat record saved success.\n')
+        return outcat_record
+    else:
+        return
 
 
 if __name__ == '__main__':
