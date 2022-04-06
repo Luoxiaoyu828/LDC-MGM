@@ -556,9 +556,7 @@ class LocalDensityCluster:
 
         # Initialize the return result: mask and out
         mask = np.zeros_like(data, dtype=np.int64)
-        # out = np.zeros_like(data, dtype=np.float32)
         my_print('Second step: calculating Outcats.' + '-' * 30, self.vosbe)
-        # print('Second step: calculating Outcats.' + '-' * 30)
         # 根据密度和距离来确定类中心
         clusterInd = -1 * np.ones(self.ND + 1)
         clust_index = np.intersect1d(np.where(rho > self.para.rho_min), np.where(self.delta > deltamin))
@@ -629,21 +627,11 @@ class LocalDensityCluster:
                                                   properties=['weighted_centroid', 'area', 'mean_intensity',
                                                               'weighted_moments_central'])
 
-                # Ar_sum = []
-                # for region in STATS:
-                #     coords = region.coords  # 经过验证，坐标原点为0
-                #     temp = 0
-                #     for j, item in enumerate(coords):
-                #         temp += data[item[0], item[1], item[2]]
-                #     Ar_sum.append(temp)
-                # Ar = np.array(Ar_sum)
                 Ar = props['mean_intensity'] * props['area']
                 ind = np.where(Ar == Ar.max())[0]
                 L[L != (ind[0] + 1)] = 0
                 cl_i = L / (ind[0] + 1)
-                # coords = STATS[ind[0]].coords  # 最大的连通域对应的坐标
-                # coords = props['coords'][ind[0]]
-                # clustNum = coords.shape[0]
+
                 clustNum = props['area'][ind[0]]
                 weighted_centroid = np.array([props['weighted_centroid-2'], props['weighted_centroid-1'], props['weighted_centroid-0']])
                 if clustNum > self.para.v_min:
@@ -839,72 +827,6 @@ class LocalDensityCluster:
                 (id_clumps, clump_Peak, clump_Cen, clustSize, clustPeak, clustSum, clustVolume))
             outcat_wcs = pd.DataFrame(outcat_wcs, columns=table_title)
             return outcat_wcs
-
-    # def change_pix2word(self, outcat):
-    #     """
-    #     将算法检测的结果(像素单位)转换到天空坐标系上去
-    #     :param data_wcs: 头文件得到的wcs
-    #     :param outcat: 算法检测核表
-    #     :return:
-    #     outcat_wcs
-    #     ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'Peak', 'Sum', 'Volume'] -->3d
-    #      ['ID', 'Peak1', 'Peak2', 'Cen1', 'Cen2',  'Size1', 'Size2', 'Peak', 'Sum', 'Volume']-->2d
-    #     """
-    #     outcat_column = outcat.shape[1]
-    #     data_wcs = self.data.wcs
-    #     if outcat_column == 10:
-    #         # 2d result
-    #         peak1, peak2 = data_wcs.all_pix2world(outcat['Peak1'], outcat['Peak2'], 1)
-    #         clump_Peak = np.column_stack([peak1, peak2])
-    #         cen1, cen2 = data_wcs.all_pix2world(outcat['Cen1'], outcat['Cen2'], 1)
-    #         clump_Cen = np.column_stack([cen1, cen2])
-    #         size1, size2 = np.array([outcat['Size1'] * 30, outcat['Size2'] * 30])
-    #         clustSize = np.column_stack([size1, size2])
-    #         clustPeak, clustSum, clustVolume = np.array([outcat['Peak'], outcat['Sum'], outcat['Volume']])
-    #         id_clumps = []  # MWSIP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
-    #         for item_l, item_b in zip(cen1, cen2):
-    #             str_l = 'MWSIP' + ('%.03f' % item_l).rjust(7, '0')
-    #             if item_b < 0:
-    #                 str_b = '-' + ('%.03f' % abs(item_b)).rjust(6, '0')
-    #             else:
-    #                 str_b = '+' + ('%.03f' % abs(item_b)).rjust(6, '0')
-    #             id_clumps.append(str_l + str_b)
-    #         id_clumps = np.array(id_clumps)
-    #         table_title = ['ID', 'Peak1', 'Peak2', 'Cen1', 'Cen2', 'Size1', 'Size2', 'Peak', 'Sum', 'Volume']
-    #
-    #     elif outcat_column == 13:
-    #         # 3d result
-    #         peak1, peak2, peak3 = data_wcs.all_pix2world(outcat['Peak1'], outcat['Peak2'], outcat['Peak3'], 1)
-    #         clump_Peak = np.column_stack([peak1, peak2, peak3 / 1000])
-    #         cen1, cen2, cen3 = data_wcs.all_pix2world(outcat['Cen1'], outcat['Cen2'], outcat['Cen3'], 1)
-    #         clump_Cen = np.column_stack([cen1, cen2, cen3 / 1000])
-    #         size1, size2, size3 = np.array([outcat['Size1'] * 30, outcat['Size2'] * 30, outcat['Size3'] * 0.166])
-    #         clustSize = np.column_stack([size1, size2, size3])
-    #         clustPeak, clustSum, clustVolume = np.array([outcat['Peak'], outcat['Sum'], outcat['Volume']])
-    #
-    #         id_clumps = []  # G017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
-    #         for item_l, item_b, item_v in zip(cen1, cen2, cen3 / 1000):
-    #             str_l = 'MWISP' + ('%.03f' % item_l).rjust(7, '0')
-    #             if item_b < 0:
-    #                 str_b = '-' + ('%.03f' % abs(item_b)).rjust(6, '0')
-    #             else:
-    #                 str_b = '+' + ('%.03f' % abs(item_b)).rjust(6, '0')
-    #             if item_v < 0:
-    #                 str_v = '-' + ('%.03f' % abs(item_v)).rjust(6, '0')
-    #             else:
-    #                 str_v = '+' + ('%.03f' % abs(item_v)).rjust(6, '0')
-    #             id_clumps.append(str_l + str_b + str_v)
-    #         id_clumps = np.array(id_clumps)
-    #         table_title = ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3',
-    #                        'Peak', 'Sum', 'Volume']
-    #     else:
-    #         print('outcat columns is %d' % outcat_column)
-    #         return None
-    #
-    #     outcat = np.column_stack(
-    #         (id_clumps, clump_Peak, clump_Cen, clustSize, clustPeak, clustSum, clustVolume))
-    #     outcat = pd.DataFrame(outcat, columns=table_title)
-    #     return outcat
 
     def touch_edge(self, outcat):
         """
