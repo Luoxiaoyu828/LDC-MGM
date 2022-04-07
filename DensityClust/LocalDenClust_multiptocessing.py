@@ -31,7 +31,7 @@ class Data:
 
     def get_data_inf(self):
         data = fits.getdata(data_name)
-        # self.wcs = self.get_wcs()
+        # self.data_wcs = self.get_wcs()
         size_x, size_y, size_z = data.shape
         self.size_x = size_x
         self.size_y = size_y
@@ -158,7 +158,7 @@ class LocDenCluster:
                                'Peak', 'Sum', 'Volume']
 
             else:
-                print('outcat columns is %d' % outcat_column)
+                print('outcat_record columns is %d' % outcat_column)
                 return None
 
             outcat_wcs = np.column_stack((id_clumps, clump_Peak, clump_Cen, clustSize, clustPeak, clustSum, clustVolume))
@@ -858,7 +858,7 @@ class LocDenCluster:
                 {'ID': 0, 'Peak1': 3, 'Peak2': 3, 'Cen1': 3, 'Cen2': 3, 'Size1': 3, 'Size2': 3, 'theta': 3, 'Peak': 3,
                  'Sum': 3, 'Volume': 3})
         else:
-            print('outcat columns is %d' % outcat_colums)
+            print('outcat_record columns is %d' % outcat_colums)
             return
 
         dataframe.to_csv(outcat_wcs_name, sep='\t', index=False)
@@ -893,7 +893,7 @@ class LocDenCluster:
                 {'ID': 0, 'Peak1': 3, 'Peak2': 3, 'Cen1': 3, 'Cen2': 3, 'Size1': 3, 'Size2': 3, 'theta': 3, 'Peak': 3,
                  'Sum': 3, 'Volume': 3})
         else:
-            print('outcat columns is %d' % outcat_colums)
+            print('outcat_record columns is %d' % outcat_colums)
             return
 
         dataframe.to_csv(outcat_name, sep='\t', index=False)

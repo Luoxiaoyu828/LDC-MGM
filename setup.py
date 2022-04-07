@@ -6,7 +6,7 @@ def readme_file():
             return wb.read()
 
 setup(name='DensityClust',
-      version='1.1.7',
+      version='1.1.8',
       author='Luo Xiaoyu',
       description='the local density clustering algorithm',
       author_email='vastlxy@163.com',

@@ -205,7 +205,7 @@ class DetectResult:
                 {'ID': 0, 'Peak1': 3, 'Peak2': 3, 'Cen1': 3, 'Cen2': 3, 'Size1': 3, 'Size2': 3, 'theta': 3, 'Peak': 3,
                  'Sum': 3, 'Volume': 3})
         else:
-            print('outcat columns is %d' % outcat_colums)
+            print('outcat_record columns is %d' % outcat_colums)
             return
 
         dataframe.to_csv(outcat_name, sep='\t', index=False)
@@ -247,7 +247,7 @@ class DetectResult:
                 {'ID': 0, 'Peak1': 3, 'Peak2': 3, 'Cen1': 3, 'Cen2': 3, 'Size1': 3, 'Size2': 3, 'theta': 3, 'Peak': 3,
                  'Sum': 3, 'Volume': 3})
         else:
-            print('outcat columns is %d' % outcat_colums)
+            print('outcat_record columns is %d' % outcat_colums)
             return
 
         dataframe.to_csv(outcat_wcs_name, sep='\t', index=False)
@@ -769,7 +769,7 @@ class LocalDensityCluster:
          ['ID', 'Peak1', 'Peak2', 'Cen1', 'Cen2',  'Size1', 'Size2', 'Peak', 'Sum', 'Volume']
          -->2d
         """
-        # outcat = self.result.outcat
+        # outcat_record = self.result.outcat_record
         table_title = outcat.keys()
         if outcat is None:
             return None
@@ -820,7 +820,7 @@ class LocalDensityCluster:
                     id_clumps.append(str_l + str_b + str_v)
                 id_clumps = np.array(id_clumps)
             else:
-                print('outcat columns name are: ' % table_title)
+                print('outcat_record columns name are: ' % table_title)
                 return None
 
             outcat_wcs = np.column_stack(
@@ -837,7 +837,7 @@ class LocalDensityCluster:
         # data_name = r'F:\DensityClust_distribution_class\DensityClust\m16_denoised.fits'
         # outcat_name = r'F:\DensityClust_distribution_class\DensityClust\m16_denoised\LDC_outcat.txt'
         # data = fits.getdata(data_name)
-        # outcat = pd.read_csv(outcat_name, sep='\t')
+        # outcat_record = pd.read_csv(outcat_name, sep='\t')
         if self.data.n_dim == 3:
             [size_x, size_y, size_v] = self.data.data_cube.shape
             indx = []
@@ -884,11 +884,11 @@ class LocalDensityCluster:
         """
         返回局部区域的检测结果：
         原始图为120*120  局部区域为30-->90, 30-->90 左开右闭
-        :param outcat: LDC outcat
+        :param outcat: LDC outcat_record
         :return:
         """
         size_x, size_y, size_v = self.data.data_cube.shape
-        # outcat = pd.read_csv(txt_name, sep='\t')
+        # outcat_record = pd.read_csv(txt_name, sep='\t')
         cen1_min = 30
         cen1_max = size_v - 30 - 1
         cen2_min = 30

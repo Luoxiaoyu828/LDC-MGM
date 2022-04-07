@@ -3,6 +3,10 @@
 /data/
 /build/
 /dist/
+**/__pycache__
+DensityClust/__pycache__/*.pyc
+*.pyc
+
 *.fits
 *.csv
 *.png

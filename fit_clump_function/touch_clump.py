@@ -117,20 +117,20 @@ end
 #     return touch_, distance_cen, distance_size
 #
 #
-# def connect_clump(outcat, mult=1):
+# def connect_clump(outcat_record, mult=1):
 #
 #     re = []
-#     for i, outcat_i in enumerate(outcat.values):
+#     for i, outcat_i in enumerate(outcat_record.values):
 #         aa = [i]
-#         for j in range(i+1, outcat.shape[0]):
-#             outcat_j = outcat.values[j]
+#         for j in range(i+1, outcat_record.shape[0]):
+#             outcat_j = outcat_record.values[j]
 #             touch_, distance_cen, distance_size = touch_clump(outcat_i, outcat_j, mult)
 #             if touch_:
 #                 aa.append(j)
 #
 #         re.append(np.array(aa, np.int64))
 #
-#     indx = np.array([item for item in range(outcat.shape[0])])
+#     indx = np.array([item for item in range(outcat_record.shape[0])])
 #     result = []
 #     for i, item in enumerate(re):
 #         if i in indx:
@@ -232,10 +232,10 @@ def touch_clump_new(outcat_i, outcat_j, mult):
 
 if __name__ == '__main__':
     # mult = 1.5   # mult  越大表示判断重叠的条件越宽松
-    # outcat = pd.read_csv(r'F:\LDC_python\detection\test_data_zhou_again\n_clump_100\outcat\gaussian_outcat_000.txt', sep='\t')
-    # result = connect_clump(outcat, mult)
+    # outcat_record = pd.read_csv(r'F:\LDC_python\detection\test_data_zhou_again\n_clump_100\outcat_record\gaussian_outcat_000.txt', sep='\t')
+    # result = connect_clump(outcat_record, mult)
     #
-    # aa = outcat.values[[1,71,99],4:10]
+    # aa = outcat_record.values[[1,71,99],4:10]
     # print(((aa[2,:3] - aa[1,:3])**2).sum()**0.5)
     # print(((aa[2, 3:6] + aa[1, 3:6]) ** 2).sum() ** 0.5)
 

@@ -46,7 +46,7 @@ def make_clumps(n, path1, size_v=100, size_y=100, size_x=100, number=10000):
     path2 = os.path.join(path1, 'n_clump_%03d' % n)  # 次级目录
     path3_model = os.path.join(path2, 'model')  # 底层目录，无噪声fits目录
     path3_out = os.path.join(path2, 'out')  # 有噪声fits目录
-    path3_outcat = os.path.join(path2, 'outcat')  # 核表目录
+    path3_outcat = os.path.join(path2, 'outcat_record')  # 核表目录
     if not os.path.exists(path1):
         os.makedirs(path1)
     if not os.path.exists(path2):

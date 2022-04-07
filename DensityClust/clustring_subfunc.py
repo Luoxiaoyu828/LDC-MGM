@@ -159,7 +159,7 @@ def save_outcat(outcat_name, outcat):
         dataframe.to_csv(fit_outcat_name, sep='\t', index=False)
         # dataframe.to_fwf(fit_outcat_name)
     else:
-        print('outcat columns is %d' % outcat_colums)
+        print('outcat_record columns is %d' % outcat_colums)
 
 
 def get_wcs(data_name):
@@ -240,7 +240,7 @@ def change_pix2word(data_wcs, outcat):
         table_title = ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3',
                        'Peak', 'Sum', 'Volume']
     else:
-        print('outcat columns is %d' % outcat_column)
+        print('outcat_record columns is %d' % outcat_column)
         return None
 
     outcat_wcs = np.column_stack((id_clumps, clump_Peak, clump_Cen, clustSize, clustPeak, clustSum, clustVolume))
@@ -254,7 +254,7 @@ def change_word2pix(data_wcs, outcat_wcs):
     :param data_wcs: 头文件得到的wcs
     :param outcat_wcs: outcat_wcs
     :return:
-    outcat
+    outcat_record
     ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'Peak', 'Sum', 'Volume'] -->3d
      ['ID', 'Peak1', 'Peak2', 'Cen1', 'Cen2',  'Size1', 'Size2', 'Peak', 'Sum', 'Volume']-->2d
     """
@@ -288,7 +288,7 @@ def change_word2pix(data_wcs, outcat_wcs):
         table_title = ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3',
                        'Peak', 'Sum', 'Volume']
     else:
-        print('outcat columns is %d' % outcat_column)
+        print('outcat_record columns is %d' % outcat_column)
         return None
 
     outcat = np.column_stack((id_clumps, clump_Peak, clump_Cen, clustSize, clustPeak, clustSum, clustVolume))
@@ -303,7 +303,7 @@ def get_outcat_local(outcat):
     :param outcat:
     :return:
     """
-    # outcat = pd.read_csv(txt_name, sep='\t')
+    # outcat_record = pd.read_csv(txt_name, sep='\t')
     cen1_min = 30
     cen1_max = 90
     cen2_min = 30

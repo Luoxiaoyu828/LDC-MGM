@@ -166,7 +166,7 @@ def make_synthetic_clumps(n, real_data_path, path, core_sample_path=None, number
     n_datacube_ = number // n  # 生成数据块的个数
     path2 = os.path.join(path, 'synthetic_clump_%03d' % n)  # 次级目录
     path3_model = os.path.join(path2, 'model')  # 底层目录，无噪声fits目录
-    path3_outcat = os.path.join(path2, 'outcat')  # 核表目录
+    path3_outcat = os.path.join(path2, 'outcat_record')  # 核表目录
     if not os.path.exists(path2):
         os.makedirs(path2)
     if not os.path.exists(path3_model):

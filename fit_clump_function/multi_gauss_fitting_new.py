@@ -267,7 +267,6 @@ def get_fit_outcat_df(params_fit_pf):
     :return:
         整理的拟合核表
     'ID': 分子云核编号
-    'Peak1','Peak2', ['Peak3']: 峰值位置坐标
     'Cen1', 'Cen2', ['Cen3']: 质心位置坐标
     'Size1', 'Size2', ['Size3']: 云核的轴长[FWHM=2.3548*sigma]
     'theta': 云核在银经银纬面上的旋转角
@@ -286,25 +285,22 @@ def get_fit_outcat_df(params_fit_pf):
     if params_num == 10:
         p_num = 8
         n_dim_ = 3
-        Peak_item = ['Peak1', 'Peak2', 'Peak3']
         Cen_item = ['Cen1', 'Cen2', 'Cen3']
         Size_item = ['Size1', 'Size2', 'Size3']
         xyv_0 = ['x0', 'y0', 'v0']
         s_123 = ['s1', 's2', 's3']
-        outcat_record_order = ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3',
-                               'theta', 'Peak', 'Sum', 'success', 'cost']
+        outcat_record_order = ['ID', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'theta', 'Peak', 'Sum',
+                               'success', 'cost']
     elif params_num == 8:
         p_num = 6
         n_dim_ = 2
-        Peak_item = ['Peak1', 'Peak2']
         Cen_item = ['Cen1', 'Cen2']
         Size_item = ['Size1', 'Size2']
         xyv_0 = ['x0', 'y0']
         s_123 = ['s1', 's2']
-        outcat_record_order = ['ID', 'Peak1', 'Peak2', 'Cen1', 'Cen2', 'Size1', 'Size2', 'theta', 'Peak', 'Sum',
-                               'success', 'cost']
+        outcat_record_order = ['ID', 'Cen1', 'Cen2', 'Size1', 'Size2', 'theta', 'Peak', 'Sum', 'success', 'cost']
     else:
-        print('only get 2d or 3d outcat!')
+        print('only get 2d or 3d outcat_record!')
         return
 
     for i, item in enumerate(params_fit_pf.values):
@@ -329,13 +325,106 @@ def get_fit_outcat_df(params_fit_pf):
     outcat_record[['Peak', 'success', 'cost']] = params_fit_pf[['A', 'success', 'cost']]
     outcat_record['theta'] = np.rad2deg(params_fit_pf['theta'].values) % 180    # 求得的角度需要用180取余
     outcat_record[['Sum']] = clumps_sum
-    outcat_record[Peak_item] = params_fit_pf[xyv_0]
     outcat_record[Cen_item] = params_fit_pf[xyv_0]
     outcat_record[Size_item] = params_fit_pf[s_123] * 2.3548
 
     outcat_record = outcat_record[outcat_record_order]
 
     return outcat_record
+
+
+def exchange_pix2world(outcat_record, data_wcs):
+    """
+    将拟合结果整理得到的核表，转换成具有实际物理意义的核表
+    [ID, Galactic Longitude, Galactic Latitude, Velocity, Size_major, Size_minor, Size_velocity, Theta, Peak, Sum,
+     Success, Cost]
+
+    :param data_wcs: 数据的头文件
+    :param outcat_record:
+        整理的拟合核表
+        ID: 分子云核编号
+        Cen1, Cen2, [Cen3]: 质心位置坐标
+        Size1, Size2, [Size3]: 云核的轴长[FWHM=2.3548*sigma]
+        theta: 云核在银经银纬面上的旋转角
+        Peak: 云核的峰值
+        Sum: 云核的总流量
+        success: 拟合是否成功
+        cost: 拟合函数和实际数据间的误差
+    :return:
+        具有物理意义的核表
+        [ID, Galactic Longitude, Galactic Latitude, Velocity, Size_major, Size_minor, Size_velocity,
+        Theta, Peak, Sum, Success, Cost]
+        ID: MWSIP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
+        Galactic Longitude: 质心的银纬 [单位：度, degree]
+        Galactic Latitude: 质心的银经  [单位：度, degree]
+        Velocity: 质心的速度           [单位：km/s]
+        Size_major: 银经银纬面上的长轴 [FWHM, 半高全宽]  [单位：角分, arcsec]
+        Size_minor: 银经银纬面上的短轴 [FWHM, 半高全宽]  [单位：角分, arcsec]
+        Size_velocity: 速度方向上的轴 [FWHM, 半高全宽]  [单位：km/s]
+        Theta: 云核在银经银纬面上的旋转角    [单位：度]
+        Peak: 云核的峰值                    [单位：K(温度)]
+        Sum: 云核的总流量                   [单位：arcsec * arcsec * km/s]
+        Success: 拟合是否成功
+        Cost: 拟合函数和实际数据间的误差
+
+    """
+
+    if not isinstance(outcat_record, pd.core.frame.DataFrame):
+        print('the params_fit_pf type must be pandas.DataFrame.')
+        return
+    table_title = outcat_record.keys()
+
+    if 'Cen3' not in table_title:
+        # 2d result
+        cen1, cen2 = data_wcs.all_pix2world(outcat_record['Cen1'], outcat_record['Cen2'], 1)
+        size1, size2 = np.array([outcat_record['Size1'] * 30, outcat_record['Size2'] * 30])
+
+        clump_Cen = np.column_stack([cen1, cen2])
+        clustSize = np.column_stack([size1, size2])
+        clustPeak, clustSum, clustVolume = np.array([outcat_record['Peak'], outcat_record['Sum'], outcat_record['Volume']])
+
+        id_clumps = []  # MWSIP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
+        for item_l, item_b in zip(cen1, cen2):
+            str_l = 'MWSIP' + ('%.03f' % item_l).rjust(7, '0')
+            if item_b < 0:
+                str_b = '-' + ('%.03f' % abs(item_b)).rjust(6, '0')
+            else:
+                str_b = '+' + ('%.03f' % abs(item_b)).rjust(6, '0')
+            id_clumps.append(str_l + str_b)
+        id_clumps = np.array(id_clumps)
+        table_title_re = ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Size_major', 'Size_minor',
+                        'Theta', 'Peak', 'Flux', 'Success', 'Cost']
+    elif 'Cen3' in table_title:
+        # 3d result
+        cen1, cen2, cen3 = data_wcs.all_pix2world(outcat_record['Cen1'], outcat_record['Cen2'], outcat_record['Cen3'], 1)
+        size1, size2, size3 = np.array([outcat_record['Size1'] * 30, outcat_record['Size2'] * 30, outcat_record['Size3'] * 0.166])
+        clustPeak, clustSum, clustVolume = np.array([outcat_record['Peak'], outcat_record['Sum'], outcat_record['Volume']])
+
+        clump_Cen = np.column_stack([cen1, cen2, cen3 / 1000])
+        clustSize = np.column_stack([size1, size2, size3])
+        id_clumps = []  # MWISP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
+        for item_l, item_b, item_v in zip(cen1, cen2, cen3 / 1000):
+            str_l = 'MWISP' + ('%.03f' % item_l).rjust(7, '0')
+            if item_b < 0:
+                str_b = '-' + ('%.03f' % abs(item_b)).rjust(6, '0')
+            else:
+                str_b = '+' + ('%.03f' % abs(item_b)).rjust(6, '0')
+            if item_v < 0:
+                str_v = '-' + ('%.03f' % abs(item_v)).rjust(6, '0')
+            else:
+                str_v = '+' + ('%.03f' % abs(item_v)).rjust(6, '0')
+            id_clumps.append(str_l + str_b + str_v)
+        id_clumps = np.array(id_clumps)
+        table_title_re = ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Velocity', 'Size_major', 'Size_minor',
+                       'Size_velocity', 'Theta', 'Peak', 'Flux', 'Success', 'Cost']
+    else:
+        print('outcat_record columns name are: ' % table_title)
+        return None
+
+    outcat_wcs = np.column_stack(
+        (id_clumps, clump_Cen, clustSize, clustPeak, clustSum, clustVolume))
+    outcat_wcs = pd.DataFrame(outcat_wcs, columns=table_title_re)
+    return outcat_wcs
 
 
 def fitting_main(points_all, params_init, clumps_id, ndim=3):
@@ -363,7 +452,7 @@ def fitting_main(points_all, params_init, clumps_id, ndim=3):
     print(time.ctime() + ': fitting ...')
     params_fit_df = fitting_multi_gauss_params(points_all, params_init, ndim=ndim)
 
-    print(time.ctime() + ': fitting over, get outcat record.')
+    print(time.ctime() + ': fitting over, get outcat_record record.')
     outcat_record = get_fit_outcat_df(params_fit_df)
 
     if isinstance(outcat_record, pd.core.frame.DataFrame):

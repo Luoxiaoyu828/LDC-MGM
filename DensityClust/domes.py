@@ -84,20 +84,20 @@ def main():
     ldc.result.make_plot_wcs_1()
     ldc.result.save_result('mask.fits', 'out.fits')
     ldc.result.save_outcat_wcs('outcat_wcs.txt')
-    ldc.result.save_outcat('outcat.txt')
+    ldc.result.save_outcat('outcat_record.txt')
 
     outcat_s = r'F:\LDC_python\detection\test_data_zhou_again\n_clump_010\outcat\gaussian_outcat_003.txt'
     from t_match import match_6_ as match
 
-    match.match_simu_detect(simulated_outcat_path=outcat_s, detected_outcat_path='outcat.txt',
+    match.match_simu_detect(simulated_outcat_path=outcat_s, detected_outcat_path='outcat_record.txt',
                             match_save_path='data/match_result')
 
     import DensityClust.make_plot as mpl
 
     mpl.make_plot(outcat_s, ldc.data.data_cube)
-    mpl.make_plot('outcat.txt', ldc.data.data_cube)
+    mpl.make_plot('outcat_record.txt', ldc.data.data_cube)
     data_denoised = bm4d.bm4d(data.data_cube, sigma_psd=0.23)
-    mpl.make_plot('outcat.txt', data_denoised)
+    mpl.make_plot('outcat_record.txt', data_denoised)
 
     model = fits.getdata(r'F:\LDC_python\detection\test_data_zhou_again\n_clump_010\model\gaussian_model_002.fits')
     dd = ldc.data.data_cube - model
@@ -120,8 +120,8 @@ def test1():
         # ldc.result.log()
         ldc.result.save_result('mask.fits', 'out.fits')
         ldc.result.save_outcat_wcs('outcat_wcs.txt')
-        ldc.result.save_outcat('outcat.txt')
-        match.match_simu_detect(simulated_outcat_path=outcat_s, detected_outcat_path='outcat.txt',
+        ldc.result.save_outcat('outcat_record.txt')
+        match.match_simu_detect(simulated_outcat_path=outcat_s, detected_outcat_path='outcat_record.txt',
                                 match_save_path='data/match_result')
 
     for item in range(2,10,1):
@@ -133,13 +133,13 @@ def test1():
         # ldc.result.log()
         ldc.result.save_result('mask.fits', 'out.fits')
         ldc.result.save_outcat_wcs('outcat_wcs.txt')
-        ldc.result.save_outcat('outcat.txt')
-        match.match_simu_detect(simulated_outcat_path=outcat_s, detected_outcat_path='outcat.txt',
+        ldc.result.save_outcat('outcat_record.txt')
+        match.match_simu_detect(simulated_outcat_path=outcat_s, detected_outcat_path='outcat_record.txt',
                                 match_save_path='data/match_result')
 
         outcat_name_old = r'F:\LDC_python\detection\test_data\M16 data\hdu0_mosaic_L_3D_1.15_4_0.01_27_0.6\LDC_outcat.txt'
         outcat_name = r'F:\DensityClust_distribution_class\DensityClust\m16_denoised\LDC_outcat.txt'
-        outcat_name = 'outcat.txt'
+        outcat_name = 'outcat_record.txt'
 
         match.match_simu_detect(simulated_outcat_path=outcat_name_old, detected_outcat_path=outcat_name,
                                 match_save_path='data/match_result111')
@@ -157,8 +157,8 @@ if __name__ == '__main__':
     ldc.save_detect_log('ehriohg.txt')
     print('*' * 30)
     # ldc.result.log()
-    # outcat_edge = ldc.touch_edge(ldc.result.outcat)
-    # ldc.result.outcat = outcat_edge
+    # outcat_edge = ldc.touch_edge(ldc.result.outcat_record)
+    # ldc.result.outcat_record = outcat_edge
     # outcat_detect = r'1.15_4_0.46_auto_3_12_27_0.01_touch_LDC_outcat.txt'
     # ldc.result.save_outcat(outcat_detect)
     # #

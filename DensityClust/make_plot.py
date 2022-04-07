@@ -18,7 +18,7 @@ def make_plot_wcs_1(data_name, outcat_wcs_name):
     """
     在积分图上绘制检测结果
     :param data_name: 3d data cube fits
-    :param outcat_wcs_name: detection outcat
+    :param outcat_wcs_name: detection outcat_record
     :return:
     """
     # sc = SkyCoord(1 * u.deg, 2 * u.deg, radial_velocity=20 * u.km / u.s)

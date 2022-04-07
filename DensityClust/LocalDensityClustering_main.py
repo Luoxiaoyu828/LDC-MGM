@@ -67,4 +67,4 @@ if __name__ == '__main__':
 
     # data_name = r'F:\LDC_python\detection\R16_data\1800-020_L.fits'
     # data = Data(data_name)
-    # print(data.wcs)
+    # print(data.data_wcs)
