@@ -20,7 +20,7 @@ def error_func(params, X, Y):
     return errorfunction
 
 
-def get_params_bound(params_init, ndim=3, peak_range=3, peak_low=5*0.23, sigma_time=1, s_time=1.5, s_low=1):
+def get_params_bound(params_init, ndim=3, peak_range=3, peak_low=5 * 0.23, sigma_time=1, s_time=1.5, s_low=1):
     """
     :param s_low:
     :param s_time:
@@ -323,7 +323,7 @@ def get_fit_outcat_df(params_fit_pf):
 
     outcat_record['ID'] = np.array([i for i in range(clumps_num)])
     outcat_record[['Peak', 'success', 'cost']] = params_fit_pf[['A', 'success', 'cost']]
-    outcat_record['theta'] = np.rad2deg(params_fit_pf['theta'].values) % 180    # 求得的角度需要用180取余
+    outcat_record['theta'] = np.rad2deg(params_fit_pf['theta'].values) % 180  # 求得的角度需要用180取余
     outcat_record[['Sum']] = clumps_sum
     outcat_record[Cen_item] = params_fit_pf[xyv_0]
     outcat_record[Size_item] = params_fit_pf[s_123] * 2.3548
@@ -381,7 +381,7 @@ def exchange_pix2world(outcat_record, data_wcs):
 
         clump_Cen = np.column_stack([cen1, cen2])
         clustSize = np.column_stack([size1, size2])
-        clustPeak, clustSum, clustVolume = np.array([outcat_record['Peak'], outcat_record['Sum'], outcat_record['Volume']])
+        clustPeak, clustSum = np.array([outcat_record['Peak'], outcat_record['Sum']])
 
         id_clumps = []  # MWSIP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
         for item_l, item_b in zip(cen1, cen2):
@@ -393,15 +393,18 @@ def exchange_pix2world(outcat_record, data_wcs):
             id_clumps.append(str_l + str_b)
         id_clumps = np.array(id_clumps)
         table_title_re = ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Size_major', 'Size_minor',
-                        'Theta', 'Peak', 'Flux', 'Success', 'Cost']
+                          'Theta', 'Peak', 'Flux', 'Success', 'Cost']
     elif 'Cen3' in table_title:
         # 3d result
-        cen1, cen2, cen3 = data_wcs.all_pix2world(outcat_record['Cen1'], outcat_record['Cen2'], outcat_record['Cen3'], 1)
-        size1, size2, size3 = np.array([outcat_record['Size1'] * 30, outcat_record['Size2'] * 30, outcat_record['Size3'] * 0.166])
-        clustPeak, clustSum, clustVolume = np.array([outcat_record['Peak'], outcat_record['Sum'], outcat_record['Volume']])
+        cen1, cen2, cen3 = data_wcs.all_pix2world(outcat_record['Cen1'], outcat_record['Cen2'],
+                                                  outcat_record['Cen3'], 1)
+        size1, size2, size3 = np.array([outcat_record['Size1'] * 30, outcat_record['Size2'] * 30,
+                                        outcat_record['Size3'] * 0.166])
+        clustPeak, clustSum = np.array([outcat_record['Peak'], outcat_record['Sum'] * 0.166])
 
         clump_Cen = np.column_stack([cen1, cen2, cen3 / 1000])
         clustSize = np.column_stack([size1, size2, size3])
+
         id_clumps = []  # MWISP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
         for item_l, item_b, item_v in zip(cen1, cen2, cen3 / 1000):
             str_l = 'MWISP' + ('%.03f' % item_l).rjust(7, '0')
@@ -416,14 +419,18 @@ def exchange_pix2world(outcat_record, data_wcs):
             id_clumps.append(str_l + str_b + str_v)
         id_clumps = np.array(id_clumps)
         table_title_re = ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Velocity', 'Size_major', 'Size_minor',
-                       'Size_velocity', 'Theta', 'Peak', 'Flux', 'Success', 'Cost']
+                          'Size_velocity', 'Theta', 'Peak', 'Flux', 'Success', 'Cost']
     else:
         print('outcat_record columns name are: ' % table_title)
         return None
+    outcat_wcs = pd.DataFrame([], columns=table_title_re)
+    outcat_wcs[
+        ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Velocity', 'Size_major', 'Size_minor', 'Size_velocity',
+         'Peak', 'Flux']] = np.column_stack([id_clumps, clump_Cen, clustSize, clustPeak, clustSum])
+    outcat_wcs[['Theta', 'Success', 'Cost']] = outcat_record[['theta', 'success', 'cost']]
+    outcat_wcs = outcat_wcs.round({'Galactic_Longitude': 2, 'Galactic_Latitude': 2, 'Velocity': 2,
+                                   'Size_major': 1, 'Size_minor': 1, 'Size_velocity': 2, 'Peak': 2, 'Flux': 2})
 
-    outcat_wcs = np.column_stack(
-        (id_clumps, clump_Cen, clustSize, clustPeak, clustSum, clustVolume))
-    outcat_wcs = pd.DataFrame(outcat_wcs, columns=table_title_re)
     return outcat_wcs
 
 
@@ -457,8 +464,9 @@ def fitting_main(points_all, params_init, clumps_id, ndim=3):
 
     if isinstance(outcat_record, pd.core.frame.DataFrame):
         outcat_record['ID'] = clumps_id
-        outcat_record = outcat_record.round({'ID': 0, 'Peak1': 2, 'Peak2': 2, 'Peak3': 2, 'Cen1': 2, 'Cen2': 2, 'Cen3': 2,
-                                     'Size1': 2, 'Size2': 2, 'Size3': 2, 'theta': 2, 'Peak': 2, 'Sum': 2})
+        outcat_record = outcat_record.round(
+            {'ID': 0, 'Peak1': 2, 'Peak2': 2, 'Peak3': 2, 'Cen1': 2, 'Cen2': 2, 'Cen3': 2,
+             'Size1': 2, 'Size2': 2, 'Size3': 2, 'theta': 2, 'Peak': 2, 'Sum': 2})
         return outcat_record
     else:
         return
