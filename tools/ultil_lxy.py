@@ -177,7 +177,6 @@ def restruct_fitting_outcat(csv_png_folder):
     fitting_outcat.to_csv(os.path.join(csv_png_folder, 'fitting_outcat.csv'), sep='\t', index=False)
 
 
-
 def pix2wcs_show_result():
     origin_data_name = r'F:\Parameter_reduction\LDC\0170+010_L\0170+010_L.fits'
     mask_name = r'0170+010_L\LDC_auto_mask.fits'
