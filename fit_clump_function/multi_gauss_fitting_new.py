@@ -119,7 +119,7 @@ def get_params_bound(params_init, ndim=3, peak_range=3, peak_low=5 * 0.23, sigma
         up_ = up_array.flatten()
     else:
         print('only fitting 2d or 3d gauss!')
-        return
+        raise ValueError
     return low_, up_
 
 
@@ -153,7 +153,8 @@ def get_multi_gauss_func_by_params(params_init, ndim=3):
         gauss_str = gauss_3d_str
     else:
         print('only fitting 2d or 3d gauss!')
-        return
+        raise ValueError
+
     gauss_num = params_init.shape[0] // param_num  # 高斯成分的个数
     express1 = ''
     for gauss_i in range(gauss_num):
@@ -203,7 +204,7 @@ def fitting_multi_gauss_params(points_all, params_init, ndim=3):
     """
     if params_init.ndim != 1:
         print('The shape of params_init must be 1*m.')
-        return None
+        raise ValueError
     power = 4
     gauss_multi_func = get_multi_gauss_func_by_params(params_init, ndim=ndim)
     low_ = []
@@ -269,7 +270,11 @@ def get_fit_outcat_df(params_fit_pf):
     'ID': 分子云核编号
     'Cen1', 'Cen2', ['Cen3']: 质心位置坐标
     'Size1', 'Size2', ['Size3']: 云核的轴长[FWHM=2.3548*sigma]
-    'theta': 云核在银经银纬面上的旋转角
+        对拟合的结果进行整理：将size1设置为(size1, size2)中的较大的值，对应
+    'theta': 云核在银经银纬面上的旋转角 [0-->180度]
+        从正北方向向逆时针方向旋转到分子云核的长轴位置之间的夹角，正北方向指：图片的竖直的边
+        if size1 > size2 --> theta = theta
+        if size1 < size2 --> theta = (theta + 90) % 180
     'Peak': 云核的峰值
     'Sum': 云核的总流量
     'success': 拟合是否成功
@@ -277,7 +282,7 @@ def get_fit_outcat_df(params_fit_pf):
     """
     if not isinstance(params_fit_pf, pd.core.frame.DataFrame):
         print('the params_fit_pf type must be pandas.DataFrame.')
-        return
+        raise TypeError
 
     clumps_num, params_num = params_fit_pf.shape  # 分子云核个数, 参数个数
     outcat_record = pd.DataFrame([])
@@ -301,7 +306,7 @@ def get_fit_outcat_df(params_fit_pf):
         outcat_record_order = ['ID', 'Cen1', 'Cen2', 'Size1', 'Size2', 'theta', 'Peak', 'Sum', 'success', 'cost']
     else:
         print('only get 2d or 3d outcat_record!')
-        return
+        raise AttributeError
 
     for i, item in enumerate(params_fit_pf.values):
         pfsc = item[: p_num]
@@ -330,6 +335,18 @@ def get_fit_outcat_df(params_fit_pf):
 
     outcat_record = outcat_record[outcat_record_order]
 
+    size_1_2 = outcat_record[['Size1', 'Size2']].values
+    theta = outcat_record['theta'].values
+    idex = np.where(size_1_2[:, 0] < size_1_2[:, 1])[0]
+
+    theta[idex] = (theta[idex] + 90) % 180
+    size_1_2_major = size_1_2.max(axis=1)
+    size_1_2_minor = size_1_2.min(axis=1)
+
+    outcat_record['Size1'] = size_1_2_major
+    outcat_record['Size2'] = size_1_2_minor
+    outcat_record['theta'] = theta
+
     return outcat_record
 
 
@@ -354,34 +371,38 @@ def exchange_pix2world(outcat_record, data_wcs):
         具有物理意义的核表
         [ID, Galactic Longitude, Galactic Latitude, Velocity, Size_major, Size_minor, Size_velocity,
         Theta, Peak, Sum, Success, Cost]
-        ID: MWSIP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
+        ID: 分子云核的编号
+            MWSIP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
         Galactic Longitude: 质心的银纬 [单位：度, degree]
         Galactic Latitude: 质心的银经  [单位：度, degree]
         Velocity: 质心的速度           [单位：km/s]
         Size_major: 银经银纬面上的长轴 [FWHM, 半高全宽]  [单位：角分, arcsec]
         Size_minor: 银经银纬面上的短轴 [FWHM, 半高全宽]  [单位：角分, arcsec]
         Size_velocity: 速度方向上的轴 [FWHM, 半高全宽]  [单位：km/s]
-        Theta: 云核在银经银纬面上的旋转角    [单位：度]
+        Theta: 云核在银经银纬面上的旋转角    [单位：度, 0-->180度]
+            从正北方向向逆时针方向旋转到分子云核的长轴位置之间的夹角，正北方向指：图片的竖直的边
         Peak: 云核的峰值                    [单位：K(温度)]
-        Sum: 云核的总流量                   [单位：arcsec * arcsec * km/s]
+        Sum: 云核的总流量                   [单位：K * arcsec * arcsec * km/s]
         Success: 拟合是否成功
         Cost: 拟合函数和实际数据间的误差
 
     """
-
     if not isinstance(outcat_record, pd.core.frame.DataFrame):
         print('the params_fit_pf type must be pandas.DataFrame.')
-        return
+        raise TypeError
+
     table_title = outcat_record.keys()
+    arcsec = 30     # 银经银纬面上的角分辨率 一个像素为30角秒
+    v_resolution = 0.166    # 速度通道上的分辨率  一个通道为0.166 km/s
 
     if 'Cen3' not in table_title:
         # 2d result
         cen1, cen2 = data_wcs.all_pix2world(outcat_record['Cen1'], outcat_record['Cen2'], 1)
-        size1, size2 = np.array([outcat_record['Size1'] * 30, outcat_record['Size2'] * 30])
+        size1, size2 = np.array([outcat_record['Size1'] * arcsec, outcat_record['Size2'] * arcsec])
 
         clump_Cen = np.column_stack([cen1, cen2])
         clustSize = np.column_stack([size1, size2])
-        clustPeak, clustSum = np.array([outcat_record['Peak'], outcat_record['Sum']])
+        clustPeak, clustSum = np.array([outcat_record['Peak'], outcat_record['Sum'] * v_resolution])
 
         id_clumps = []  # MWSIP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
         for item_l, item_b in zip(cen1, cen2):
@@ -398,9 +419,9 @@ def exchange_pix2world(outcat_record, data_wcs):
         # 3d result
         cen1, cen2, cen3 = data_wcs.all_pix2world(outcat_record['Cen1'], outcat_record['Cen2'],
                                                   outcat_record['Cen3'], 1)
-        size1, size2, size3 = np.array([outcat_record['Size1'] * 30, outcat_record['Size2'] * 30,
-                                        outcat_record['Size3'] * 0.166])
-        clustPeak, clustSum = np.array([outcat_record['Peak'], outcat_record['Sum'] * 0.166])
+        size1, size2, size3 = np.array([outcat_record['Size1'] * arcsec, outcat_record['Size2'] * arcsec,
+                                        outcat_record['Size3'] * v_resolution])
+        clustPeak, clustSum = np.array([outcat_record['Peak'], outcat_record['Sum'] * v_resolution])
 
         clump_Cen = np.column_stack([cen1, cen2, cen3 / 1000])
         clustSize = np.column_stack([size1, size2, size3])
@@ -422,7 +443,8 @@ def exchange_pix2world(outcat_record, data_wcs):
                           'Size_velocity', 'Theta', 'Peak', 'Flux', 'Success', 'Cost']
     else:
         print('outcat_record columns name are: ' % table_title)
-        return None
+        raise AttributeError
+
     outcat_wcs = pd.DataFrame([], columns=table_title_re)
     outcat_wcs[
         ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Velocity', 'Size_major', 'Size_minor', 'Size_velocity',
@@ -437,6 +459,7 @@ def exchange_pix2world(outcat_record, data_wcs):
 def fitting_main(points_all, params_init, clumps_id, ndim=3):
     """
     多高斯拟合的主函数，返回拟合的结果[pandas.DataFrame]
+    :param clumps_id:
     :param points_all: [m*4 pandas.DataFrame] [x,y,v,I]
     :param params_init: [1*m ndarray]
         [A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3, ..., An, xn, yn, sn_1, sn_2,theta_n,vn, sn_3]
@@ -450,11 +473,11 @@ def fitting_main(points_all, params_init, clumps_id, ndim=3):
 
     if not isinstance(points_all, pd.core.frame.DataFrame):
         print('the points_all type must be pandas.DataFrame.')
-        return
+        raise TypeError
 
     if not isinstance(params_init, np.ndarray):
         print('the params_init type must be ndarray.')
-        return
+        raise TypeError
 
     print(time.ctime() + ': fitting ...')
     params_fit_df = fitting_multi_gauss_params(points_all, params_init, ndim=ndim)
@@ -469,7 +492,7 @@ def fitting_main(points_all, params_init, clumps_id, ndim=3):
              'Size1': 2, 'Size2': 2, 'Size3': 2, 'theta': 2, 'Peak': 2, 'Sum': 2})
         return outcat_record
     else:
-        return
+        raise TypeError
 
 
 if __name__ == '__main__':
