@@ -139,12 +139,12 @@ end
 #     return result
 
 
-def connect_clump_new(outcat, mult=1):
+def connect_clump_new(outcat, mult=1.0):
     """
 
     :param outcat: 像素核表
     :param mult: 比例系数
-        if distance_cen > distance_size * mult
+        if distance_cen > (distance_size * mult) or distance_v_cen > (distance_v_size * mult):
             touch_ = 0; # 没有重叠
         else
             touch_ = 1; # 存在重叠
@@ -197,8 +197,8 @@ def touch_clump_new(outcat_i, outcat_j, mult):
 
     :param outcat_i: 第i个分子云核核表记录 [pd.DataFrame]
     :param outcat_j: 第j个分子云核核表记录
-   :param mult: 比例系数
-        if distance_cen > distance_size * mult
+    :param mult: 比例系数
+        if distance_cen > (distance_size * mult) or distance_v_cen > (distance_v_size * mult):
             touch_ = 0; # 没有重叠
         else
             touch_ = 1; # 存在重叠
@@ -207,11 +207,27 @@ def touch_clump_new(outcat_i, outcat_j, mult):
     """
     axis_size = 2.3548   # 将 FWHM 转换成 sigma
     if 'Cen3' in outcat_i.keys():
-        clump_cen_i = outcat_i[['Cen1', 'Cen2', 'Cen3']].values
-        clump_cen_j = outcat_j[['Cen1', 'Cen2', 'Cen3']].values
+        clump_cen_i = outcat_i[['Cen1', 'Cen2']].values
+        clump_cen_j = outcat_j[['Cen1', 'Cen2']].values
 
-        clump_size_i = outcat_i[['Size1', 'Size2', 'Size3']].values / axis_size
-        clump_size_j = outcat_j[['Size1', 'Size2', 'Size3']].values / axis_size
+        clump_size_i = outcat_i[['Size1', 'Size2']].values / axis_size
+        clump_size_j = outcat_j[['Size1', 'Size2']].values / axis_size
+
+        clump_v_i = outcat_i[['Cen3']].values
+        clump_v_j = outcat_j[['Cen3']].values
+
+        clump_size_v_i = outcat_i[['Size3']].values / axis_size
+        clump_size_v_j = outcat_j[['Size3']].values / axis_size
+
+        distance_cen = ((clump_cen_i - clump_cen_j) ** 2).sum() ** 0.5  # % 两个云核银经银纬面上中心点间的距离
+        distance_size = (clump_size_i ** 2).sum() ** 0.5 + (clump_size_j ** 2).sum() ** 0.5  # % 轴长之和构成的长度
+
+        distance_v_size = clump_size_v_i + clump_size_v_j
+        distance_v_cen = np.abs(clump_v_i - clump_v_j)
+        if (distance_size * mult) < distance_cen or (distance_v_size * mult) < distance_v_cen:
+            touch_ = 0  # 代表没有重叠
+        else:
+            touch_ = 1
 
     else:
         clump_cen_i = outcat_i[['Cen1', 'Cen2']].values
@@ -220,12 +236,12 @@ def touch_clump_new(outcat_i, outcat_j, mult):
         clump_size_i = outcat_i[['Size1', 'Size2']].values / axis_size
         clump_size_j = outcat_j[['Size1', 'Size2']].values / axis_size
 
-    distance_cen = ((clump_cen_i - clump_cen_j) ** 2).sum()**0.5    # % 两个云核中心点间的距离
-    distance_size = (clump_size_i**2).sum()**0.5 + (clump_size_j**2).sum()**0.5  # % 轴长之和构成的长度
-    if distance_cen > (distance_size * mult):
-        touch_ = 0      # 代表没有重叠
-    else:
-        touch_ = 1
+        distance_cen = ((clump_cen_i - clump_cen_j) ** 2).sum() ** 0.5  # 两个云核银经银纬面上中心点间的距离
+        distance_size = (clump_size_i ** 2).sum() ** 0.5 + (clump_size_j ** 2).sum() ** 0.5  # % 轴长之和构成的长度
+        if (distance_size * mult) < distance_cen:
+            touch_ = 0  # 代表没有重叠
+        else:
+            touch_ = 1
 
     return touch_, distance_cen, distance_size
 
