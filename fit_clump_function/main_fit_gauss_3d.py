@@ -4,7 +4,8 @@ import os
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
-from fit_clump_function_ import multi_gauss_fitting, multi_gauss_fitting_new, touch_clump
+
+from fit_clump_function import multi_gauss_fitting, multi_gauss_fitting_new, touch_clump
 from tools.ultil_lxy import create_folder, get_points_by_clumps_id, move_csv_png, restruct_fitting_outcat
 from tools.show_clumps import display_clumps_fitting
 
