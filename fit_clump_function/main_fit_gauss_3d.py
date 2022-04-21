@@ -9,6 +9,7 @@ from fit_clump_function import multi_gauss_fitting, multi_gauss_fitting_new, tou
 from tools.ultil_lxy import create_folder, get_points_by_clumps_id, move_csv_png, restruct_fitting_outcat,\
     get_save_clumps_xyv
 from tools.show_clumps import display_clumps_fitting
+from DensityClust.locatDenClust2 import Data
 
 
 def get_fit_outcat(origin_data_name, mask_name, outcat_name):
@@ -87,6 +88,8 @@ def fitting_LDC_clumps(points_path, outcat_name):
     """
     print('processing file->%s' % outcat_name)
     f_outcat = pd.read_csv(outcat_name, sep=',')
+    if f_outcat.shape[1]==1:
+        f_outcat = pd.read_csv(outcat_name, sep='\t')
 
     csv_png_folder = outcat_name.replace('.csv', '_fitting')
     create_folder(csv_png_folder)
@@ -130,15 +133,33 @@ def fitting_LDC_clumps(points_path, outcat_name):
     restruct_fitting_outcat(csv_png_folder)
 
 
-if __name__ == '__main__':
+def a_little_revise(outcat_name_loc):
     """
-    examples
+    1.1.5--->1.1.6 修复bug: clump_size[clump_ii, :] = 2.3548 * np.array([size_1[0], size_2[0], size_3[0])
+    ---> clump_size[clump_ii, :] = 2.3548 * np.array([size_1[ind[0]], size_2[ind[0]], size_3[ind[0]]])
+    在选择流量最大连通域中，对应的size也应跟着一起选择 而不是默认选择第一个
+    R16和R2的结果，size: 第一个轴和第三个轴需要调换一下，基于wcs的核表需要转换成像素后再转换
+
+    故在本次结果中需要做修改  后面的检测结果就不需要了
     """
-    outcat_name = r'F:\Parameter_reduction\LDC\0170+010_L\LDC_auto_outcat.csv'
-    outcat_name_loc = r'F:\Parameter_reduction\LDC\0170+010_L\LDC_auto_loc_outcat.csv'
-    points_path = r'/0170+010_L/0170+010_L_points'
-    origin_name = r'F:\Parameter_reduction\LDC\0170+010_L\0170+010_L.fits'
-    mask_name = r'F:\Parameter_reduction\LDC\0170+010_L\LDC_auto_mask.fits'
+    outcat_temp1 = pd.DataFrame([])
+    outcat_temp = pd.read_csv(outcat_name_loc, sep='\t')
+    if outcat_temp.shape[1]==1:
+        outcat_temp = pd.read_csv(outcat_name_loc, sep=',')
+    outcat_temp1[['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1',
+                  'Size2', 'Size3', 'Peak', 'Sum', 'Volume']] = outcat_temp[
+        ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size3',
+         'Size2', 'Size1', 'Peak', 'Sum', 'Volume']]
+    outcat_name_loc1 = outcat_name_loc.replace('.csv', '_revise.csv')
+    outcat_temp1.to_csv(outcat_name_loc1, sep='\t', index=False)
+    return outcat_name_loc1
+
+
+def LDC_para_fit_Main(outcat_name_loc, points_path, origin_name, mask_name, re_outcat_path, mm_outcat):
+    """
+
+    """
+    outcat_name_loc = a_little_revise(outcat_name_loc)
 
     # step 1: 准备拟合数据
     get_save_clumps_xyv(origin_name, mask_name, outcat_name_loc, points_path)
@@ -146,6 +167,21 @@ if __name__ == '__main__':
     # step 2: 进行拟合
     fitting_LDC_clumps(points_path, outcat_name_loc)
 
-    outcat_name_simu = r'0170+010_L\simulate_data\gaussian_outcat_002.txt'
-    points_path = r'../0170+010_L/simulate_data/points'
-    # fitting_LDC_clumps(points_path, outcat_name_simu)
+    # step 3: 将拟合核表整理成最终核表
+    data_int = Data(origin_name)
+    data_int.get_wcs()
+    data_wcs = data_int.wcs
+    re_outcat = pd.read_csv(re_outcat_path, sep='\t')
+    mm_outcat_df = multi_gauss_fitting_new.exchange_pix2world(re_outcat, data_wcs)
+    mm_outcat_df.to_csv(mm_outcat, sep='\t', index=False)
+
+
+if __name__ == '__main__':
+    outcat_name_loc = r'F:\Parameter_reduction\LDC\0155+030_L\LDC_auto_loc_outcat.csv'
+    points_path = r'F:\Parameter_reduction\LDC\0155+030_L\0155+030_L_points'
+    origin_name = r'F:\Parameter_reduction\LDC\0155+030_L\0155+030_L.fits'
+    mask_name = r'F:\Parameter_reduction\LDC\0155+030_L\LDC_auto_mask.fits'
+    re_outcat_path = r'F:\Parameter_reduction\LDC\0155+030_L\LDC_auto_loc_outcat_fitting\fitting_outcat.csv'
+    mm_outcat = re_outcat_path.replace('fitting_outcat.csv', 'MWISP_outcat.csv')
+
+    LDC_para_fit_Main(outcat_name_loc, points_path, origin_name, mask_name, re_outcat_path, mm_outcat)
