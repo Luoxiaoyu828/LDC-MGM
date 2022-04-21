@@ -74,6 +74,8 @@ def get_save_clumps_xyv(origin_data_name, mask_name, outcat_name, save_path):
     data = fits.getdata(origin_data_name)
     mask = fits.getdata(mask_name)
     f_outcat = pd.read_csv(outcat_name, sep='\t')
+    if f_outcat.shape[1] == 1:
+        f_outcat = pd.read_csv(outcat_name, sep=',')
 
     [data_x, data_y, data_v] = data.shape
     Xin, Yin, Vin = np.mgrid[1:data_x + 1, 1:data_y + 1, 1:data_v + 1]
