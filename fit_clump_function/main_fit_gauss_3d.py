@@ -171,9 +171,12 @@ def LDC_para_fit_Main(outcat_name_loc, points_path, origin_name, mask_name, re_o
     data_int = Data(origin_name)
     data_int.get_wcs()
     data_wcs = data_int.wcs
-    re_outcat = pd.read_csv(re_outcat_path, sep='\t')
+    re_outcat_path1 = re_outcat_path.replace('LDC_auto_loc_outcat_fitting', 'LDC_auto_loc_outcat_revise_fitting')
+    re_outcat = pd.read_csv(re_outcat_path1, sep='\t')
     mm_outcat_df = multi_gauss_fitting_new.exchange_pix2world(re_outcat, data_wcs)
-    mm_outcat_df.to_csv(mm_outcat, sep='\t', index=False)
+    mm_outcat1 = mm_outcat.replace('LDC_auto_loc_outcat_fitting', 'LDC_auto_loc_outcat_revise_fitting')
+
+    mm_outcat_df.to_csv(mm_outcat1, sep='\t', index=False)
 
 
 if __name__ == '__main__':
