@@ -169,7 +169,7 @@ def move_csv_png(csv_png_folder):
 
 def restruct_fitting_outcat(csv_png_folder):
     csv_folder = os.path.join(csv_png_folder, 'csv')
-    csv_path_ob = [os.path.join(csv_folder, item) for item in os.listdir(csv_folder)]
+    csv_path_ob = [os.path.join(csv_folder, item) for item in os.listdir(csv_folder) if item[-7:-4].isalnum()]
     outcat_df = pd.DataFrame([])
     for item in csv_path_ob:
         outcat_item = pd.read_csv(item, sep='\t')
