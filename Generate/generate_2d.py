@@ -56,7 +56,7 @@ def make_clumps_1(n, path1, size_y=100, size_x=100, number=10000):
         os.makedirs(path3_out)
     if not os.path.exists(path3_outcat):
         os.makedirs(path3_outcat)
-    fits_header = fits.open('/home/data/zhougr/Cloud/Generate/hdu0_mosaic_L_3D.fits')[0].header  # 读取头文件
+    fits_header = fits.open('./hdu0_mosaic_L_3D.fits')[0].header  # 读取头文件
     for item in ['CROTA3', 'CRPIX3', 'CDELT3', 'CRVAL3', 'CTYPE3', 'CUNIT3']:
         fits_header.remove(item)
     total = []
