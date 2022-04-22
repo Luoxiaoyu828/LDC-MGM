@@ -174,7 +174,7 @@ def make_synthetic_clumps(n, real_data_path, path, core_sample_path=None, number
     if not os.path.exists(path3_outcat):
         os.makedirs(path3_outcat)
     if core_sample_path == None:
-        core_sample_path = os.path.join(path, 'sample_data.txt')
+        core_sample_path = './sample_data.txt'
     a = np.loadtxt(core_sample_path, skiprows=1)  # 读取样本数据
     fits_header = fits.open(real_data_path)[0].header  # 读取头文件
     angle = np.random.uniform(0, 180, size=[a.shape[0], 1])  # 随机生成旋转角度
@@ -204,8 +204,8 @@ def make_synthetic_clumps(n, real_data_path, path, core_sample_path=None, number
                 is_join = is_separable_2(outcat1, outcat2)
             if is_join:  # 若第i个能加入，则执行
                 res = generate(xyz, row_rand[i, 1], x0, y0, v0, row_rand[i, 2] / 2.3548,
-                                          row_rand[i, 3] / 2.3548,
-                                          row_rand[i, 4] / 2.3548, ((90 + row_rand[i, 6]) % 180) / 180 * np.pi)
+                               row_rand[i, 3] / 2.3548,
+                               row_rand[i, 4] / 2.3548, ((90 + row_rand[i, 6]) % 180) / 180 * np.pi)
                 data = res.reshape((size_v, size_y, size_x))
                 Sum1 = data.sum()
                 res_data += data

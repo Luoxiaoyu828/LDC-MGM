@@ -57,7 +57,7 @@ def make_clumps(n, path1, size_v=100, size_y=100, size_x=100, number=10000):
         os.makedirs(path3_out)
     if not os.path.exists(path3_outcat):
         os.makedirs(path3_outcat)
-    fits_header = fits.open('./Generate/no_data.fits')[0].header  # 读取头文件
+    fits_header = fits.open('./no_data.fits')[0].header  # 读取头文件
     total_data = []
     while 1:
         new_coreTable = []  # 存储核表数据
