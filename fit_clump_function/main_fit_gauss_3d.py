@@ -86,7 +86,11 @@ def fitting_LDC_clumps(points_path, outcat_name):
         拟合核表 DataFrame格式
     ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'theta', 'Peak', 'Sum']
     """
-    print('processing file->%s' % outcat_name)
+    log_file = points_path.replace('points', 'LDC_MGM_log.txt')
+    time_st = time.time()
+    file = open(log_file, 'a+')
+    print('Data information:\nprocessing file->%s' % outcat_name, file=file)
+    print('='*20 + '\n', file=file)
     f_outcat = pd.read_csv(outcat_name, sep=',')
     if f_outcat.shape[1]==1:
         f_outcat = pd.read_csv(outcat_name, sep='\t')
@@ -96,23 +100,24 @@ def fitting_LDC_clumps(points_path, outcat_name):
 
     # 得到相互重叠的云核(ID)
     touch_clump_record, _ = touch_clump.connect_clump_new(f_outcat, mult=0.9)
-    print('The overlapping clumps are selected.')
+    print('Fitting process:', file=file)
+    print('The overlapping clumps are selected.', file=file)
 
     params_init_all = np.array([f_outcat['Peak'], f_outcat['Cen1'], f_outcat['Cen2'], f_outcat['Size1'] / 2.3548,
                             f_outcat['Size2'] / 2.3548, f_outcat['ID'], f_outcat['Cen3'], f_outcat['Size3'] / 2.3548]).T
     params_init_all[:, 5] = 0  # 初始化的角度
-    print('The initial parameters (Initial guess) have finished')
+    print('The initial parameters (Initial guess) have finished.', file=file)
 
     for i, item_tcr in enumerate(touch_clump_record):
         fit_outcat_name = os.path.join(csv_png_folder, 'fit_item%03d.csv' % i)
         fig_name = os.path.join(csv_png_folder, 'touch_clumps_%03d.png' % i)
 
-        print(time.ctime() + 'touch_clump %d/%d' % (i, len(touch_clump_record)))
+        print(time.ctime() + '-->touch_clump %d/%d.' % (i, len(touch_clump_record)), file=file)
         clumps_id = f_outcat.iloc[item_tcr - 1]['ID'].values.astype(np.int64)
         points_all_df = get_points_by_clumps_id(clumps_id, points_path)
 
         params_init = params_init_all[item_tcr - 1].flatten()
-        print('Solving a nonlinear least-squares problem to find parameters.')
+        # print('Solving a nonlinear least-squares problem to find parameters.')
 
         outcat_fitting = multi_gauss_fitting_new.fitting_main(points_all_df, params_init, clumps_id)
 
@@ -129,8 +134,13 @@ def fitting_LDC_clumps(points_path, outcat_name):
         fig.savefig(fig_name)
         plt.close(fig)
 
+    print('=' * 20 + '\n', file=file)
     move_csv_png(csv_png_folder)
     restruct_fitting_outcat(csv_png_folder)
+    time_end = time.time()
+
+    print('Fitting information:\nFitting clumps used %.2f seconds.' % (time_end - time_st), file=file)
+    file.close()
 
 
 def a_little_revise(outcat_name_loc):

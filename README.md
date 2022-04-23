@@ -1,5 +1,7 @@
 python setup.py build
+
 python setup.py sdist
+
 python setup.py bdist_wheel
 
 twine upload dist/[file_name]
