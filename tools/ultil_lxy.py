@@ -56,7 +56,8 @@ def create_folder(path):
     """
     if not os.path.exists(path):
         os.mkdir(path)
-        print(path + 'created successfully!')
+        print(path + ' created successfully!')
+    return path
 
 
 def get_save_clumps_xyv(origin_data_name, mask_name, outcat_name, save_path):
