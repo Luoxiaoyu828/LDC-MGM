@@ -228,7 +228,7 @@ def display_data(data):
         return fig, (ax1, ax2, ax3)
 
 
-def display_clumps_fitting(pif_1, df_temp_1, points_all_df):
+def display_clumps_fitting(pif_1, df_temp_1, points_all_df, fig_name):
     data = get_data_points(points_all_df)
     fig, (ax, ax1, ax2) = display_data(data)
     ax.scatter(pif_1['Cen3'], pif_1['Cen2'], c='r')
@@ -255,6 +255,8 @@ def display_clumps_fitting(pif_1, df_temp_1, points_all_df):
         'Cen1'].values
     for ii in range(p_1_1.shape[0]):
         ax2.plot([p_1_1[ii], p_1_2[ii]], [p_2_1[ii], p_2_2[ii]], 'r')
+    fig.savefig(fig_name)
+    plt.close(fig)
 
 
 def make_plot_wcs_1(outcat_wcs, data_wcs, data_cube):
