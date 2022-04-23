@@ -77,11 +77,12 @@ def get_fit_outcat(origin_data_name, mask_name, outcat_name):
     return dataframe
 
 
-def fitting_LDC_clumps(points_path, outcat_name):
+def fitting_LDC_clumps(points_path, outcat_name, ldc_mgm_path=None):
     """
     对LDC的检测结果进行3维高斯拟合，保存分子云核的参数
     :param points_path: 云核坐标点及强度文件所在的文件夹路径
     :param outcat_name: 检测得到的核表
+    :param ldc_mgm_path: 拟合结果保存文件夹
     :return:
         拟合核表 DataFrame格式
     ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'theta', 'Peak', 'Sum']
@@ -89,14 +90,15 @@ def fitting_LDC_clumps(points_path, outcat_name):
     log_file = points_path.replace('points', 'LDC_MGM_log.txt')
     time_st = time.time()
     file = open(log_file, 'a+')
+
     print('Data information:\nprocessing file->%s' % outcat_name, file=file)
     print('='*20 + '\n', file=file)
     f_outcat = pd.read_csv(outcat_name, sep=',')
-    if f_outcat.shape[1]==1:
+    if f_outcat.shape[1] == 1:
         f_outcat = pd.read_csv(outcat_name, sep='\t')
 
-    csv_png_folder = outcat_name.replace('.csv', '_fitting')
-    create_folder(csv_png_folder)
+    if ldc_mgm_path is None:
+        create_folder(outcat_name.replace('.csv', '_fitting'))
 
     # 得到相互重叠的云核(ID)
     touch_clump_record, _ = touch_clump.connect_clump_new(f_outcat, mult=0.9)
@@ -109,8 +111,8 @@ def fitting_LDC_clumps(points_path, outcat_name):
     print('The initial parameters (Initial guess) have finished.', file=file)
 
     for i, item_tcr in enumerate(touch_clump_record):
-        fit_outcat_name = os.path.join(csv_png_folder, 'fit_item%03d.csv' % i)
-        fig_name = os.path.join(csv_png_folder, 'touch_clumps_%03d.png' % i)
+        fit_outcat_name = os.path.join(ldc_mgm_path, 'fit_item%03d.csv' % i)
+        fig_name = os.path.join(ldc_mgm_path, 'touch_clumps_%03d.png' % i)
 
         print(time.ctime() + '-->touch_clump %d/%d.' % (i, len(touch_clump_record)), file=file)
         clumps_id = f_outcat.iloc[item_tcr - 1]['ID'].values.astype(np.int64)
@@ -128,15 +130,16 @@ def fitting_LDC_clumps(points_path, outcat_name):
 
         pif_1 = outcat_fitting[['Cen1', 'Cen2', 'Cen3']] - points_all_df[['x_2', 'y_1', 'v_0']].values.min(axis=0)
         df_temp_1 = f_outcat.iloc[item_tcr - 1]
-        display_clumps_fitting(pif_1, df_temp_1, points_all_df)
+        display_clumps_fitting(pif_1, df_temp_1, points_all_df, fig_name)
 
-        fig = plt.gcf()
-        fig.savefig(fig_name)
-        plt.close(fig)
+        # fig = plt.gcf()
+        # fig.savefig(fig_name)
+        # plt.close(fig)
 
     print('=' * 20 + '\n', file=file)
-    move_csv_png(csv_png_folder)
-    restruct_fitting_outcat(csv_png_folder)
+    move_csv_png(ldc_mgm_path)
+    restruct_fitting_outcat(ldc_mgm_path)
+    # 将分开拟合的核表整合在一起，保存在ldc_mgm_path下，命名为fitting_outcat.csv
     time_end = time.time()
 
     print('Fitting information:\nFitting clumps used %.2f seconds.' % (time_end - time_st), file=file)
@@ -165,36 +168,40 @@ def a_little_revise(outcat_name_loc):
     return outcat_name_loc1
 
 
-def LDC_para_fit_Main(outcat_name_loc, points_path, origin_name, mask_name, re_outcat_path, mm_outcat):
+def LDC_para_fit_Main(outcat_name_loc, origin_name, mask_name, save_path):
     """
+    outcat_name_loc: LDC 检测核表
+    origin_name: 检测的原始数据
+    mask_name: LDC检测得到的mask
+    save_path: 拟合结果保存位置
+    """
+    # 初始化对应文件保存路径
+    create_folder(save_path)
+    points_path = create_folder(os.path.join(save_path, 'points'))
+    ldc_mgm_path = create_folder(os.path.join(save_path, 'LDC_MGM_outcat'))
+    MWISP_outcat_path = os.path.join(save_path, 'MWISP_outcat.csv')
 
-    """
     outcat_name_loc = a_little_revise(outcat_name_loc)
 
     # step 1: 准备拟合数据
     get_save_clumps_xyv(origin_name, mask_name, outcat_name_loc, points_path)
 
     # step 2: 进行拟合
-    fitting_LDC_clumps(points_path, outcat_name_loc)
+    fitting_LDC_clumps(points_path, outcat_name_loc, ldc_mgm_path)
 
     # step 3: 将拟合核表整理成最终核表
     data_int = Data(origin_name)
     data_int.get_wcs()
     data_wcs = data_int.wcs
-    re_outcat_path1 = re_outcat_path.replace('LDC_auto_loc_outcat_fitting', 'LDC_auto_loc_outcat_revise_fitting')
-    re_outcat = pd.read_csv(re_outcat_path1, sep='\t')
-    mm_outcat_df = multi_gauss_fitting_new.exchange_pix2world(re_outcat, data_wcs)
-    mm_outcat1 = mm_outcat.replace('LDC_auto_loc_outcat_fitting', 'LDC_auto_loc_outcat_revise_fitting')
-
-    mm_outcat_df.to_csv(mm_outcat1, sep='\t', index=False)
+    fitting_outcat = pd.read_csv(os.path.join(ldc_mgm_path, 'fitting_outcat.csv'), sep='\t')
+    MWISP_outcat_df = multi_gauss_fitting_new.exchange_pix2world(fitting_outcat, data_wcs)
+    MWISP_outcat_df.to_csv(MWISP_outcat_path, sep='\t', index=False)
 
 
 if __name__ == '__main__':
     outcat_name_loc = r'F:\Parameter_reduction\LDC\0155+030_L\LDC_auto_loc_outcat.csv'
-    points_path = r'F:\Parameter_reduction\LDC\0155+030_L\0155+030_L_points'
     origin_name = r'F:\Parameter_reduction\LDC\0155+030_L\0155+030_L.fits'
     mask_name = r'F:\Parameter_reduction\LDC\0155+030_L\LDC_auto_mask.fits'
-    re_outcat_path = r'F:\Parameter_reduction\LDC\0155+030_L\LDC_auto_loc_outcat_fitting\fitting_outcat.csv'
-    mm_outcat = re_outcat_path.replace('fitting_outcat.csv', 'MWISP_outcat.csv')
+    save_path = 'fitting_result'
 
-    LDC_para_fit_Main(outcat_name_loc, points_path, origin_name, mask_name, re_outcat_path, mm_outcat)
+    LDC_para_fit_Main(outcat_name_loc, origin_name, mask_name, save_path)
