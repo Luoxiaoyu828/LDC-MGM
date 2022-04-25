@@ -479,10 +479,10 @@ def fitting_main(points_all, params_init, clumps_id, ndim=3):
         print('the params_init type must be ndarray.')
         raise TypeError
 
-    print(time.ctime() + ': fitting ...')
+    # print(time.ctime() + ': fitting ...')
     params_fit_df = fitting_multi_gauss_params(points_all, params_init, ndim=ndim)
 
-    print(time.ctime() + ': fitting over, get outcat_record record.')
+    # print(time.ctime() + ': fitting over, get outcat_record record.')
     outcat_record = get_fit_outcat_df(params_fit_df)
 
     if isinstance(outcat_record, pd.core.frame.DataFrame):

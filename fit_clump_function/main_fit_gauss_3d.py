@@ -3,7 +3,8 @@ import astropy.io.fits as fits
 import os
 import time
 import pandas as pd
-import matplotlib.pyplot as plt
+from tqdm import tqdm
+
 
 from fit_clump_function import multi_gauss_fitting, multi_gauss_fitting_new, touch_clump
 from tools.ultil_lxy import create_folder, get_points_by_clumps_id, move_csv_png, restruct_fitting_outcat,\
@@ -110,11 +111,11 @@ def fitting_LDC_clumps(points_path, outcat_name, ldc_mgm_path=None):
     params_init_all[:, 5] = 0  # 初始化的角度
     print('The initial parameters (Initial guess) have finished.', file=file)
 
-    for i, item_tcr in enumerate(touch_clump_record):
+    for i, item_tcr in tqdm(enumerate(touch_clump_record)):
         fit_outcat_name = os.path.join(ldc_mgm_path, 'fit_item%03d.csv' % i)
         fig_name = os.path.join(ldc_mgm_path, 'touch_clumps_%03d.png' % i)
 
-        print(time.ctime() + '-->touch_clump %d/%d.' % (i, len(touch_clump_record)), file=file)
+        print(time.ctime() + '-->touch_clump %d/%d have %d clump[s].' % (i, len(touch_clump_record), len(item_tcr)), file=file)
         clumps_id = f_outcat.iloc[item_tcr - 1]['ID'].values.astype(np.int64)
         points_all_df = get_points_by_clumps_id(clumps_id, points_path)
 
