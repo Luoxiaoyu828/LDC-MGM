@@ -10,6 +10,11 @@ from sympy import symbols, lambdify, exp, sin, cos
 """
 
 
+def in_bounds(x, lb, ub):
+    """Check if a point lies within bounds."""
+    return np.all((x >= lb) & (x <= ub))
+
+
 def error_func(params, X, Y):
     power = 1
     gauss_3d_func = get_multi_gauss_func_by_params(params)
@@ -20,7 +25,7 @@ def error_func(params, X, Y):
     return errorfunction
 
 
-def get_params_bound(params_init, ndim=3, peak_range=3, peak_low=5 * 0.23, sigma_time=1, s_time=1.5, s_low=1):
+def get_params_bound(params_init, ndim=3, peak_range=3, peak_low=3 * 0.23, sigma_time=1, s_time=1.5, s_low=1):
     """
     :param s_low:
     :param s_time:
@@ -30,7 +35,7 @@ def get_params_bound(params_init, ndim=3, peak_range=3, peak_low=5 * 0.23, sigma
     :param ndim: 高斯模型的维数
     :param params_init: 1*m nd array
     peak_range = 3  # 拟合时，峰值可以偏移的范围
-    peak_low = 5 * 0.23     # 拟合的peak 最低值
+    peak_low = 3 * 0.23     # 拟合的peak 最低值
     sigma_time = 1      # 质心可以偏移的范围：sigma_time * sigma
     s_time = 1.5       # sigma 偏移的倍数：[s0_1 * (s_time - 1), s0_1 * s_time]
     s_low = 1   # sigma的最低值
@@ -171,12 +176,12 @@ def get_multi_gauss_func_by_params(params_init, ndim=3):
     return gauss_multi_func
 
 
-def fitting_multi_gauss_params(points_all, params_init, ndim=3):
+def fitting_multi_gauss_params(points_all_df, params_init, ndim=3):
     """
     根据数据点，初始化参数，对模型进行拟合，返回拟合参数
 
     :param ndim: 高斯模型的维数
-    :param points_all: [x, y, v, intensity]
+    :param points_all_df: [x, y, v, intensity]
     :param params_init: 1*m ndarray
         [A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3, ..., An, xn, yn, sn_1, sn_2,theta_n,vn, sn_3]
         LDC算法计算的3维高斯模型的初始猜想值
@@ -213,10 +218,10 @@ def fitting_multi_gauss_params(points_all, params_init, ndim=3):
         columns_name = ['A', 'x0', 'y0', 's1', 's2', 'theta']
         param_num = 6
         gauss_num = params_init.shape[0] // param_num
-        X = points_all['x_2'].values
-        Y = points_all['y_1'].values
+        X = points_all_df['x_2'].values
+        Y = points_all_df['y_1'].values
         gauss_multi_value = gauss_multi_func(X, Y)
-        Intensity = points_all['Intensity'].values
+        Intensity = points_all_df['Intensity'].values
         weight = gauss_multi_value ** power / ((gauss_multi_value ** power).sum())  # 创建拟合的权重
         errorfunc = lambda p: np.ravel((get_multi_gauss_func_by_params(p, ndim=2)(X, Y) - Intensity) * weight)
         [low_.extend([0, 20, 20, 0, 0, 0]) for _ in range(gauss_num)]
@@ -224,11 +229,11 @@ def fitting_multi_gauss_params(points_all, params_init, ndim=3):
     elif ndim == 3:
         columns_name = ['A', 'x0', 'y0', 's1', 's2', 'theta', 'v0', 's3']
         param_num = 8
-        X = points_all['x_2'].values
-        Y = points_all['y_1'].values
-        V = points_all['v_0'].values
+        X = points_all_df['x_2'].values
+        Y = points_all_df['y_1'].values
+        V = points_all_df['v_0'].values
         gauss_multi_value = gauss_multi_func(X, Y, V)
-        Intensity = points_all['Intensity'].values
+        Intensity = points_all_df['Intensity'].values
         weight = gauss_multi_value ** power / ((gauss_multi_value ** power).sum())  # 创建拟合的权重
         errorfunc = lambda p: np.ravel((get_multi_gauss_func_by_params(p, ndim=3)(X, Y, V) - Intensity) * weight)
         low_, up_ = get_params_bound(params_init, ndim=3)
@@ -456,11 +461,11 @@ def exchange_pix2world(outcat_record, data_wcs):
     return outcat_wcs
 
 
-def fitting_main(points_all, params_init, clumps_id, ndim=3):
+def fitting_main(points_all_df, params_init, clumps_id, ndim=3):
     """
     多高斯拟合的主函数，返回拟合的结果[pandas.DataFrame]
     :param clumps_id:
-    :param points_all: [m*4 pandas.DataFrame] [x,y,v,I]
+    :param points_all_df: [m*4 pandas.DataFrame] [x,y,v,I]
     :param params_init: [1*m ndarray]
         [A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3, ..., An, xn, yn, sn_1, sn_2,theta_n,vn, sn_3]
         LDC算法计算的3维高斯模型的初始猜想值
@@ -471,7 +476,7 @@ def fitting_main(points_all, params_init, clumps_id, ndim=3):
         None
     """
 
-    if not isinstance(points_all, pd.core.frame.DataFrame):
+    if not isinstance(points_all_df, pd.core.frame.DataFrame):
         print('the points_all type must be pandas.DataFrame.')
         raise TypeError
 
@@ -480,7 +485,7 @@ def fitting_main(points_all, params_init, clumps_id, ndim=3):
         raise TypeError
 
     # print(time.ctime() + ': fitting ...')
-    params_fit_df = fitting_multi_gauss_params(points_all, params_init, ndim=ndim)
+    params_fit_df = fitting_multi_gauss_params(points_all_df, params_init, ndim=ndim)
 
     # print(time.ctime() + ': fitting over, get outcat_record record.')
     outcat_record = get_fit_outcat_df(params_fit_df)
