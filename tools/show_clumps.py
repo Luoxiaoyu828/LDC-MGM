@@ -224,7 +224,6 @@ def display_data(data):
         im0 = ax1.imshow(data.sum(0), origin='lower')  # x银纬,y银经
         im1 = ax2.imshow(data.sum(1), origin='lower')  # x银纬，y速度
         im2 = ax3.imshow(data.sum(2), origin='lower')  # x银经，y速度
-        plt.show()
         return fig, (ax1, ax2, ax3)
 
 
@@ -255,6 +254,7 @@ def display_clumps_fitting(pif_1, df_temp_1, points_all_df, fig_name):
         'Cen1'].values
     for ii in range(p_1_1.shape[0]):
         ax2.plot([p_1_1[ii], p_1_2[ii]], [p_2_1[ii], p_2_2[ii]], 'r')
+
     fig.savefig(fig_name)
     plt.close(fig)
 
