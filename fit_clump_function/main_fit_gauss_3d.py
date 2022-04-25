@@ -110,20 +110,21 @@ def fitting_LDC_clumps(points_path, outcat_name, ldc_mgm_path=None):
                             f_outcat['Size2'] / 2.3548, f_outcat['ID'], f_outcat['Cen3'], f_outcat['Size3'] / 2.3548]).T
     params_init_all[:, 5] = 0  # 初始化的角度
     print('The initial parameters (Initial guess) have finished.', file=file)
-
-    for i, item_tcr in tqdm(enumerate(touch_clump_record)):
-        fit_outcat_name = os.path.join(ldc_mgm_path, 'fit_item%03d.csv' % i)
-        fig_name = os.path.join(ldc_mgm_path, 'touch_clumps_%03d.png' % i)
-
-        print(time.ctime() + '-->touch_clump %d/%d have %d clump[s].' % (i, len(touch_clump_record), len(item_tcr)), file=file)
+    touch_record_i = 0
+    for item_tcr in tqdm(touch_clump_record):
+        # print(i)
+        fit_outcat_name = os.path.join(ldc_mgm_path, 'fit_item%03d.csv' % touch_record_i)
+        fig_name = os.path.join(ldc_mgm_path, 'touch_clumps_%03d.png' % touch_record_i)
+        print(time.ctime() + '-->touch_clump %d/%d have %d clump[s].' % (touch_record_i, len(touch_clump_record), len(item_tcr)), file=file)
+        touch_record_i += 1
         clumps_id = f_outcat.iloc[item_tcr - 1]['ID'].values.astype(np.int64)
+
         points_all_df = get_points_by_clumps_id(clumps_id, points_path)
 
         params_init = params_init_all[item_tcr - 1].flatten()
         # print('Solving a nonlinear least-squares problem to find parameters.')
 
         outcat_fitting = multi_gauss_fitting_new.fitting_main(points_all_df, params_init, clumps_id)
-
         if fit_outcat_name.split('.')[-1] not in ['csv', 'txt']:
             print('the save file type must be one of *.csv and *.txt.')
         else:
@@ -132,10 +133,6 @@ def fitting_LDC_clumps(points_path, outcat_name, ldc_mgm_path=None):
         pif_1 = outcat_fitting[['Cen1', 'Cen2', 'Cen3']] - points_all_df[['x_2', 'y_1', 'v_0']].values.min(axis=0)
         df_temp_1 = f_outcat.iloc[item_tcr - 1]
         display_clumps_fitting(pif_1, df_temp_1, points_all_df, fig_name)
-
-        # fig = plt.gcf()
-        # fig.savefig(fig_name)
-        # plt.close(fig)
 
     print('=' * 20 + '\n', file=file)
     move_csv_png(ldc_mgm_path)
@@ -177,11 +174,21 @@ def LDC_para_fit_Main(outcat_name_loc, origin_name, mask_name, save_path):
     save_path: 拟合结果保存位置
     """
     # 初始化对应文件保存路径
+    if not os.path.exists(outcat_name_loc):
+        raise FileExistsError('\n' + outcat_name_loc + ' not exists.')
+
+    if not os.path.exists(origin_name):
+        raise FileExistsError('\n' + origin_name + ' not exists.')
+
+    if not os.path.exists(mask_name):
+        raise FileExistsError('\n' + mask_name + ' not exists.')
+
     create_folder(save_path)
     points_path = create_folder(os.path.join(save_path, 'points'))
     ldc_mgm_path = create_folder(os.path.join(save_path, 'LDC_MGM_outcat'))
     MWISP_outcat_path = os.path.join(save_path, 'MWISP_outcat.csv')
 
+    # step 0: 将LDC核表中size1和size3交换一下， 只针对R2和R16的数据，后面的数据不需要处理
     outcat_name_loc = a_little_revise(outcat_name_loc)
 
     # step 1: 准备拟合数据
