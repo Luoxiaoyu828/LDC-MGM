@@ -3,7 +3,6 @@
 /MGM_problem_cell/0155+030_L/
 /data/
 /build/
-/dist/
 **/__pycache__
 DensityClust/__pycache__/*.pyc
 *.pyc

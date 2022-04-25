@@ -61,3 +61,7 @@ Bug:同一个核被分到两个cell了：
         aa = outcat.loc[outcat['Cen1'] > cen1_min]
         aa = aa.loc[outcat['Cen1'] < = cen1_max]
         即从31到90 
+ 
+
+1.1.9-->1.2.0:
+基本完成多高斯拟合代码，优化了以前的代码
