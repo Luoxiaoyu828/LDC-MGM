@@ -85,12 +85,14 @@ def get_save_clumps_xyv(origin_data_name, mask_name, outcat_name, save_path):
     Y = data.flatten()
     clumps_id = f_outcat['ID'].values.astype(np.int64)
     for id_clumps_item in clumps_id:
+        clump_item_name = os.path.join(save_path, 'clump_id_xyz_intensity_%04d.csv' % id_clumps_item)
+        if os.path.exists(clump_item_name):
+            continue
         clump_item_df = pd.DataFrame([])
         ind = np.where(mask_flatten == id_clumps_item)[0]
 
         clump_item_df[['x_2', 'y_1', 'v_0']] = X[ind, :]
         clump_item_df['Intensity'] = Y[ind]
-        clump_item_name = os.path.join(save_path, 'clump_id_xyz_intensity_%04d.csv' % id_clumps_item)
 
         clump_item_df.to_csv(clump_item_name, index=False)
 
