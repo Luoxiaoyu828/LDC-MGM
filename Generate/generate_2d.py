@@ -3,17 +3,13 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
+from Generate.fits_header import Header
 
 
 def is_separable_2(outcat1, outcat2):
     xy_distance = (np.sqrt((outcat1[:, 0] - outcat2[0, 0]) ** 2 + (outcat1[:, 1] - outcat2[0, 1]) ** 2))  # xy距离矩阵
     sigma_xy_distance = np.sqrt(outcat1[:, 2] ** 2 + outcat1[:, 3] ** 2) + np.sqrt(
         outcat2[0, 2] ** 2 + outcat2[0, 3] ** 2)  # 主轴次轴距离矩阵
-    # v_distance = (np.abs(outcat1[:, 2] - outcat2[0, 2]))  # v轴距离矩阵
-    # sigma_v_distance = outcat1[:, 5] + outcat2[0, 5]  # 速度轴距离矩阵
-    #     func1_res = v_distance - sigma_v_distance
-    #     func1_res[func1_res >= 0] = 0  # 可分
-    #     func1_res[func1_res < 0] = 1  # 不可分
     func2_res = xy_distance - sigma_xy_distance
     func2_res[func2_res >= 0] = 0  # 可分
     func2_res[func2_res < 0] = 1  # 不可分
@@ -35,7 +31,8 @@ generate = lambda xyz, peak, x0, y0, size1, size2, theta: peak * np.exp(-(
                 2 * (-np.sin(2 * theta) / (4 * size1 ** 2) + np.sin(2 * theta) / (4 * size2 ** 2)))))
 
 
-def make_clumps_1(n, path1, size_y=100, size_x=100, number=10000):
+def make_clumps_1(n, path1, size_y=100, size_x=100, number=10000, fits_header_path='./no_data.fits', history_info=None,
+                  information=None):
     colsName2 = ['ID', 'Peak1', 'Peak2', 'Cen1', 'Cen2', 'Size1', 'Size2', 'theta', 'Peak', 'Sum', 'Area']  # 核表抬头
     x, y = np.mgrid[1:size_y + 1, 1:size_x + 1]
     xyz = np.column_stack([y.flat, x.flat])
@@ -56,9 +53,11 @@ def make_clumps_1(n, path1, size_y=100, size_x=100, number=10000):
         os.makedirs(path3_out)
     if not os.path.exists(path3_outcat):
         os.makedirs(path3_outcat)
-    fits_header = fits.open('./hdu0_mosaic_L_3D.fits')[0].header  # 读取头文件
-    for item in ['CROTA3', 'CRPIX3', 'CDELT3', 'CRVAL3', 'CTYPE3', 'CUNIT3']:
-        fits_header.remove(item)
+    if os.path.exists(fits_header_path):
+        fits_header = fits.open(fits_header_path)[0].header  # 读取头文件
+    else:
+        header = Header(dim=2, size=[size_x, size_y], rms=rms, history_info=history_info, information=information)
+        fits_header = header.write_header()
     total = []
     while 1:
         new_coreTable = []  # 存储核表数据
@@ -121,3 +120,5 @@ def make_clumps_1(n, path1, size_y=100, size_x=100, number=10000):
         if n_datacube == n_datacube_:
             break
     return total
+
+
