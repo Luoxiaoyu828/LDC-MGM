@@ -2,6 +2,7 @@ import numpy as np
 from astropy.io import fits
 import os
 import pandas as pd
+from Generate.fits_header import Header
 
 
 def is_separable_2(outcat1, outcat2):
@@ -35,7 +36,8 @@ generate = lambda xyz, peak, x0, y0, v0, size1, size2, size3, theta: peak * np.e
                 (xyz[:, 2] - v0) ** 2) / (2 * size3 ** 2)))
 
 
-def make_clumps(n, path1, size_v=100, size_y=100, size_x=100, number=10000):
+def make_clumps(n, path1, size_v=100, size_y=100, size_x=100, number=10000, fits_header_path='./no_data.fits',
+                history_info=None, information=None):
     colsName2 = ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'theta', 'Peak',
                  'Sum', 'Volume']  # 核表抬头
     x, y, z = np.mgrid[1:size_v + 1, 1:size_y + 1, 1:size_x + 1]
@@ -57,7 +59,11 @@ def make_clumps(n, path1, size_v=100, size_y=100, size_x=100, number=10000):
         os.makedirs(path3_out)
     if not os.path.exists(path3_outcat):
         os.makedirs(path3_outcat)
-    fits_header = fits.open('./no_data.fits')[0].header  # 读取头文件
+    if os.path.exists(fits_header_path):
+        fits_header = fits.open(fits_header_path)[0].header  # 读取头文件
+    else:
+        header = Header(dim=3, size=[size_x, size_y, size_v], rms=rms, history_info=history_info, information=information)
+        fits_header = header.write_header()
     total_data = []
     while 1:
         new_coreTable = []  # 存储核表数据
@@ -120,3 +126,8 @@ def make_clumps(n, path1, size_v=100, size_y=100, size_x=100, number=10000):
         if n_datacube == n_datacube_:
             break
     return total_data
+
+
+if __name__ == '__main__':
+    total_data = make_clumps(n=10, path1='./', size_v=100, size_y=100, size_x=100, number=10, fits_header_path='',
+                history_info=None, information=None)
