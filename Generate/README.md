@@ -1,40 +1,37 @@
-# Generate Cores
-## 2D data
-You can use generate_2d.py to generate 2D data of cores.
-This file contains some functions, such as 'is_separable_2', 'make_clumps_1'.  
-In this file, 'make_clumps_1' is the main function.
-It is parameters are n, path1, size_y, size_x and number.
+# Generate Data
+You can use generate.py to generate 2D or 3D data of cores.
+This file contains some functions, such as 'is_separable_2', 'is_separable_3'.  
+In this file, 'make_clumps' is the main function.
+It is parameters are dim, n, path1, size_v, size_y, size_x, number, fits_header_path, history_info, information.
 I will explain what these parameters mean next.  
 ```
+dim: [int]dimension of data.
 n: [int]Number of cores in each data block.
 path1: [str]The location of the data store.
+size_v: [int]size_v of a data block.If dim is 2, you can ignore it.
 size_y: [int]size_y of a data block.
 size_x: [int]size_x of a data block.
 number: [int]The total number of cores.
+fits_header_path: [str]If you have a fits file that include header, you can provide.
+history_info: [dict]History information about fits.
+information: [dict]Header information.The following is an introduction to its format.
+Keywords for 3D data:{'SIMPLE', 'BITPIX', 'NAXIS', 'NAXIS1', 'NAXIS2', 'NAXIS3', 'DATAMIN', 'DATAMAX', 'BUNIT',
+                        'CTYPE1', 'CRVAL1', 'CDELT1', 'CRPIX1', 'CROTA1', 'CTYPE2', 'CRVAL2', 'CDELT2', 'CRPIX2',
+                        'CROTA2', 'CTYPE3', 'CRVAL3', 'CDELT3', 'CRPIX3', 'CROTA3', 'EQUINOX', 'LINE', 'ALTRVAL',
+                        'ALTRPIX', 'RESTFREQ', 'BMAJ', 'BMIN', 'BPA', 'ORIGIN', 'DATE', 'RMS', 'CUNIT3'}
+Keywords for 2D data:{'SIMPLE', 'BITPIX', 'NAXIS', 'NAXIS1', 'NAXIS2', 'DATAMIN', 'DATAMAX', 'BUNIT',
+                        'CTYPE1', 'CRVAL1', 'CDELT1', 'CRPIX1', 'CROTA1', 'CTYPE2', 'CRVAL2', 'CDELT2', 'CRPIX2',
+                        'CROTA2', 'EQUINOX', 'LINE', 'ALTRVAL', 'ALTRPIX', 'RESTFREQ', 'BMAJ', 'BMIN', 'BPA', 
+                        'ORIGIN', 'DATE', 'RMS', 'CUNIT3'}
+example:information = {'SIMPLE': (True, )}
 ```
 This is an example:
 ```
-total_data = make_clumps_1(n=10, path1=path, size_y=100, size_x=100, number=100)
+total_data = make_clumps_1(dim=3, n=10, path1=path, size_y=100, size_x=100, number=100)
 ```
 The above example will returns one total data(it contains 10(number / n) data block), and the data
 is saved to the path you specify. 
 
-##3D data
-It is very similar to '2D data', but its main function is 'make_clumps', 
-it takes an extra parameter 'size_v'.
-I will explain what these parameters mean next.  
-```
-n: [int]Number of cores in each data block.
-path1: [str]The location of the data store.
-size_y: [int]size_y of a data block.
-size_x: [int]size_x of a data block.
-size_v: [int]size_v of a data block.
-number: [int]The total number of cores.
-```
-This is an example:
-```
-total_data = make_clumps_1(n=10, path1=path, size_v=100, size_y=100, size_x=100, number=100)
-```
 
 ## Synthetic Data
 You can use synthetic_data.py to generate synthetic data.
