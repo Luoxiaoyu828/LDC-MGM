@@ -189,7 +189,7 @@ def LDC_para_fit_Main(outcat_name_loc, origin_name, mask_name, save_path):
     MWISP_outcat_path = os.path.join(save_path, 'MWISP_outcat.csv')
 
     # step 0: 将LDC核表中size1和size3交换一下， 只针对R2和R16的数据，后面的数据不需要处理
-    outcat_name_loc = a_little_revise(outcat_name_loc)
+    # outcat_name_loc = a_little_revise(outcat_name_loc)
 
     # step 1: 准备拟合数据
     get_save_clumps_xyv(origin_name, mask_name, outcat_name_loc, points_path)
