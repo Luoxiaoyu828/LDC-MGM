@@ -88,8 +88,15 @@ class Data:
             self.rms = data_header['RMS']
             print('the rms of cell is %.4f\n' % data_header['RMS'])
         else:
-            print('the data header not have rms, and the rms of data is set 0.23.\n')
-            self.rms = 0.23
+            data_rms_path = self.data_path.replace('L.fits', 'L_rms.fits')
+            if os.path.exists(data_rms_path):
+                data_rms = fits.getdata(data_rms_path)
+                data_rms[np.isnan(data_rms)] = 0  # 去掉NaN
+                self.rms = np.median(data_rms)
+                print('The data header not have rms, and the rms is used the median of the file:%s.\n' % data_rms_path)
+            else:
+                print('the data header not have rms, and the rms of data is set 0.23.\n')
+                self.rms = 0.23
 
     def summary(self):
         print('=' * 30)
