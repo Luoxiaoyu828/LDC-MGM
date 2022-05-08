@@ -7,11 +7,9 @@ from fit_clump_function import multi_gauss_fitting, multi_gauss_fitting_new
 from tools.ultil_lxy import get_datacube_by_points
 
 from fit_clump_function import main_fit_gauss_3d as mgm
-from tools.ultil_lxy import create_folder
-import os
 
 
-def fitting_func():
+def fitting_func(data_rms):
     origin_data_name = r'0170+010_L\0170+010_L.fits'
     mask_name = r'0170+010_L\LDC_auto_mask.fits'
     outcat_name = r'0170+010_L\LDC_auto_loc_outcat.csv'
