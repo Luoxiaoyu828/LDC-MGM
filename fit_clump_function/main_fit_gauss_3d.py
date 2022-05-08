@@ -192,13 +192,12 @@ def LDC_para_fit_Main(outcat_name_loc, origin_name, mask_name, save_path):
     # outcat_name_loc = a_little_revise(outcat_name_loc)
 
     # step 1: 准备拟合数据
-    # get_save_clumps_xyv(origin_name, mask_name, outcat_name_loc, points_path)
+    get_save_clumps_xyv(origin_name, mask_name, outcat_name_loc, points_path)
 
     # step 2: 进行拟合
     data_int = Data(origin_name)
     data_rms = data_int.rms
-
-    # fitting_LDC_clumps(points_path, outcat_name_loc, data_rms, ldc_mgm_path)
+    fitting_LDC_clumps(points_path, outcat_name_loc, data_rms, ldc_mgm_path)
 
     # step 3: 将拟合核表整理成最终核表
     data_int.get_wcs()

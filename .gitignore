@@ -1,6 +1,6 @@
 /.idea/
 /0170+010_L/
-/MGM_problem_cell/0155+030_L/
+/0170+010_L/MGM_problem_cell/0155+030_L/
 /data/
 /build/
 **/__pycache__
@@ -16,4 +16,4 @@ setup.py
 README.MD
 fit_simulate_data.py
 /fit_clump_function/fitting_result/
-/MGM_problem_cell/
+/0170+010_L/MGM_problem_cell/
