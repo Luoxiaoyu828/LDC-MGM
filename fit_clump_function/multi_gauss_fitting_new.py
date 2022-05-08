@@ -35,7 +35,7 @@ def get_params_bound(params_init, ndim=3, peak_range=3, peak_low=3 * 0.23, sigma
     :param ndim: 高斯模型的维数
     :param params_init: 1*m nd array
     peak_range = 3  # 拟合时，峰值可以偏移的范围
-    peak_low = 3 * 0.23     # 拟合的peak 最低值
+    peak_low = 3 * 0.23     # 拟合的peak 最低值 默认为0
     sigma_time = 1      # 质心可以偏移的范围：sigma_time * sigma
     s_time = 1.5       # sigma 偏移的倍数：[s0_1 * (s_time - 1), s0_1 * s_time]
     s_low = 1   # sigma的最低值
@@ -256,7 +256,7 @@ def fitting_multi_gauss_params(points_all_df, params_init, ndim=3):
     return params_fit_df
 
 
-def get_fit_outcat_df(params_fit_pf):
+def get_fit_outcat_df(params_fit_pf, data_rms):
     """
     对拟合的结果进行整理得到拟合云核核表
     :param params_fit_pf:
@@ -284,15 +284,25 @@ def get_fit_outcat_df(params_fit_pf):
     'Sum': 云核的总流量
     'success': 拟合是否成功
     'cost': 拟合函数和实际数据间的误差
+    'Peak_SNR': 峰值信噪比
+    'Flux_SNR': 信噪比
     """
     if not isinstance(params_fit_pf, pd.core.frame.DataFrame):
         print('the params_fit_pf type must be pandas.DataFrame.')
         raise TypeError
 
+    interg_rg = 5  # 对云核表达式进行积分时，前后移动轴长的倍数
+
     clumps_num, params_num = params_fit_pf.shape  # 分子云核个数, 参数个数
     outcat_record = pd.DataFrame([])
     clumps_sum = np.zeros([clumps_num, 1])
-    if params_num == 10:
+    clumps_Flux_SNR = np.zeros([clumps_num, 1])
+    clumps_Peak_SNR = np.zeros([clumps_num, 1])
+
+    column_name = params_fit_pf.keys().to_list()
+    case_3d = {'x0', 'y0', 'v0'} < set(column_name)
+    case_2d = {'x0', 'y0'} < set(column_name)
+    if case_3d:
         p_num = 8
         n_dim_ = 3
         Cen_item = ['Cen1', 'Cen2', 'Cen3']
@@ -300,15 +310,16 @@ def get_fit_outcat_df(params_fit_pf):
         xyv_0 = ['x0', 'y0', 'v0']
         s_123 = ['s1', 's2', 's3']
         outcat_record_order = ['ID', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'theta', 'Peak', 'Sum',
-                               'success', 'cost']
-    elif params_num == 8:
+                               'Flux_SNR', 'Peak_SNR', 'success', 'cost']
+    elif case_2d:
         p_num = 6
         n_dim_ = 2
         Cen_item = ['Cen1', 'Cen2']
         Size_item = ['Size1', 'Size2']
         xyv_0 = ['x0', 'y0']
         s_123 = ['s1', 's2']
-        outcat_record_order = ['ID', 'Cen1', 'Cen2', 'Size1', 'Size2', 'theta', 'Peak', 'Sum', 'success', 'cost']
+        outcat_record_order = ['ID', 'Cen1', 'Cen2', 'Size1', 'Size2', 'theta', 'Peak', 'Sum', 'Flux_SNR', 'Peak_SNR',
+                               'success', 'cost']
     else:
         print('only get 2d or 3d outcat_record!')
         raise AttributeError
@@ -318,28 +329,42 @@ def get_fit_outcat_df(params_fit_pf):
         pfsc_1 = params_fit_pf.iloc[i]
         func = get_multi_gauss_func_by_params(pfsc, ndim=n_dim_)
 
-        if params_num == 10:
-            x_lim = [pfsc_1['x0'] - 10 * pfsc_1['s1'], pfsc_1['x0'] + 10 * pfsc_1['s1']]
-            y_lim = [pfsc_1['y0'] - 10 * pfsc_1['s2'], pfsc_1['y0'] + 10 * pfsc_1['s2']]
-            v_lim = [pfsc_1['v0'] - 10 * pfsc_1['s3'], pfsc_1['v0'] + 10 * pfsc_1['s3']]
+        if case_3d:
+            x_lim = [pfsc_1['x0'] - interg_rg * pfsc_1['s1'], pfsc_1['x0'] + interg_rg * pfsc_1['s1']]
+            y_lim = [pfsc_1['y0'] - interg_rg * pfsc_1['s2'], pfsc_1['y0'] + interg_rg * pfsc_1['s2']]
+            v_lim = [pfsc_1['v0'] - interg_rg * pfsc_1['s3'], pfsc_1['v0'] + interg_rg * pfsc_1['s3']]
             intergrate_bound = [x_lim, y_lim, v_lim]
-        else:
-            x_lim = [pfsc_1['x0'] - 10 * pfsc_1['s1'], pfsc_1['x0'] + 10 * pfsc_1['s1']]
-            y_lim = [pfsc_1['y0'] - 10 * pfsc_1['s2'], pfsc_1['y0'] + 10 * pfsc_1['s2']]
+        elif case_2d:
+            x_lim = [pfsc_1['x0'] - interg_rg * pfsc_1['s1'], pfsc_1['x0'] + interg_rg * pfsc_1['s1']]
+            y_lim = [pfsc_1['y0'] - interg_rg * pfsc_1['s2'], pfsc_1['y0'] + interg_rg * pfsc_1['s2']]
             intergrate_bound = [x_lim, y_lim]
+        else:
+            print('only get 2d or 3d outcat_record!')
+            raise AttributeError
 
         integrate_result = integrate.nquad(func, intergrate_bound)
         clumps_sum[i, 0] = integrate_result[0]
+
+        Xin, Yin, Vin = np.mgrid[x_lim[0]: x_lim[1], y_lim[0]: y_lim[1], v_lim[0]: v_lim[1]]
+        Y = func(Xin.flatten(), Yin.flatten(), Vin.flatten())
+        Y_threshold = func(x_lim[0], pfsc_1['y0'], pfsc_1['v0'])  # 计算云核边界阈值
+        clump_volume = np.where(Y >= Y_threshold)[0].shape[0]
+
+        clumps_Flux_SNR[i, 0] = integrate_result[0] / (data_rms * clump_volume**0.5)
+        clumps_Peak_SNR[i, 0] = pfsc_1['A'] / data_rms
 
     outcat_record['ID'] = np.array([i for i in range(clumps_num)])
     outcat_record[['Peak', 'success', 'cost']] = params_fit_pf[['A', 'success', 'cost']]
     outcat_record['theta'] = np.rad2deg(params_fit_pf['theta'].values) % 180  # 求得的角度需要用180取余
     outcat_record[['Sum']] = clumps_sum
+    outcat_record[['Flux_SNR']] = clumps_Flux_SNR
+    outcat_record[['Peak_SNR']] = clumps_Peak_SNR
     outcat_record[Cen_item] = params_fit_pf[xyv_0]
     outcat_record[Size_item] = params_fit_pf[s_123] * 2.3548
 
     outcat_record = outcat_record[outcat_record_order]
 
+    # 将银经银纬面上的主轴和次主轴区分开，并将角度对应的修正
     size_1_2 = outcat_record[['Size1', 'Size2']].values
     theta = outcat_record['theta'].values
     idex = np.where(size_1_2[:, 0] < size_1_2[:, 1])[0]
@@ -419,7 +444,7 @@ def exchange_pix2world(outcat_record, data_wcs):
             id_clumps.append(str_l + str_b)
         id_clumps = np.array(id_clumps)
         table_title_re = ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Size_major', 'Size_minor',
-                          'Theta', 'Peak', 'Flux', 'Success', 'Cost']
+                          'Theta', 'Peak', 'Flux', 'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']
     elif 'Cen3' in table_title:
         # 3d result
         cen1, cen2, cen3 = data_wcs.all_pix2world(outcat_record['Cen1'], outcat_record['Cen2'],
@@ -445,7 +470,7 @@ def exchange_pix2world(outcat_record, data_wcs):
             id_clumps.append(str_l + str_b + str_v)
         id_clumps = np.array(id_clumps)
         table_title_re = ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Velocity', 'Size_major', 'Size_minor',
-                          'Size_velocity', 'Theta', 'Peak', 'Flux', 'Success', 'Cost']
+                          'Size_velocity', 'Theta', 'Peak', 'Flux', 'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']
     else:
         print('outcat_record columns name are: ' % table_title)
         raise AttributeError
@@ -454,14 +479,16 @@ def exchange_pix2world(outcat_record, data_wcs):
     outcat_wcs[
         ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Velocity', 'Size_major', 'Size_minor', 'Size_velocity',
          'Peak', 'Flux']] = np.column_stack([id_clumps, clump_Cen, clustSize, clustPeak, clustSum])
-    outcat_wcs[['Theta', 'Success', 'Cost']] = outcat_record[['theta', 'success', 'cost']]
-    outcat_wcs = outcat_wcs.round({'Galactic_Longitude': 2, 'Galactic_Latitude': 2, 'Velocity': 2,
-                                   'Size_major': 1, 'Size_minor': 1, 'Size_velocity': 2, 'Peak': 2, 'Flux': 2})
+    outcat_wcs[['Theta', 'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']] = outcat_record[
+        ['theta', 'Flux_SNR', 'Peak_SNR', 'success', 'cost']]
+    outcat_wcs = outcat_wcs.round(
+        {'Galactic_Longitude': 2, 'Galactic_Latitude': 2, 'Velocity': 2, 'Size_major': 1, 'Size_minor': 1,
+         'Size_velocity': 2, 'Peak': 2, 'Flux': 2, 'Flux_SNR': 2, 'Peak_SNR': 2})
 
     return outcat_wcs
 
 
-def fitting_main(points_all_df, params_init, clumps_id, ndim=3):
+def fitting_main(points_all_df, params_init, clumps_id, data_rms, ndim=3):
     """
     多高斯拟合的主函数，返回拟合的结果[pandas.DataFrame]
     :param clumps_id:
@@ -488,7 +515,7 @@ def fitting_main(points_all_df, params_init, clumps_id, ndim=3):
     params_fit_df = fitting_multi_gauss_params(points_all_df, params_init, ndim=ndim)
 
     # print(time.ctime() + ': fitting over, get outcat_record record.')
-    outcat_record = get_fit_outcat_df(params_fit_df)
+    outcat_record = get_fit_outcat_df(params_fit_df, data_rms)
 
     if isinstance(outcat_record, pd.core.frame.DataFrame):
         outcat_record['ID'] = clumps_id

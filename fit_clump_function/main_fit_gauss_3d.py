@@ -78,7 +78,7 @@ def get_fit_outcat(origin_data_name, mask_name, outcat_name):
     return dataframe
 
 
-def fitting_LDC_clumps(points_path, outcat_name, ldc_mgm_path=None):
+def fitting_LDC_clumps(points_path, outcat_name, data_rms, ldc_mgm_path=None):
     """
     对LDC的检测结果进行3维高斯拟合，保存分子云核的参数
     :param points_path: 云核坐标点及强度文件所在的文件夹路径
@@ -112,7 +112,7 @@ def fitting_LDC_clumps(points_path, outcat_name, ldc_mgm_path=None):
     print('The initial parameters (Initial guess) have finished.', file=file)
     touch_record_i = 0
     for item_tcr in tqdm(touch_clump_record):
-        # print(i)
+
         fit_outcat_name = os.path.join(ldc_mgm_path, 'fit_item%03d.csv' % touch_record_i)
         fig_name = os.path.join(ldc_mgm_path, 'touch_clumps_%03d.png' % touch_record_i)
         print(time.ctime() + '-->touch_clump %d/%d have %d clump[s].' % (touch_record_i, len(touch_clump_record), len(item_tcr)), file=file)
@@ -124,7 +124,7 @@ def fitting_LDC_clumps(points_path, outcat_name, ldc_mgm_path=None):
         params_init = params_init_all[item_tcr - 1].flatten()
         # print('Solving a nonlinear least-squares problem to find parameters.')
 
-        outcat_fitting = multi_gauss_fitting_new.fitting_main(points_all_df, params_init, clumps_id)
+        outcat_fitting = multi_gauss_fitting_new.fitting_main(points_all_df, params_init, clumps_id, data_rms)
         if fit_outcat_name.split('.')[-1] not in ['csv', 'txt']:
             print('the save file type must be one of *.csv and *.txt.')
         else:
@@ -192,13 +192,15 @@ def LDC_para_fit_Main(outcat_name_loc, origin_name, mask_name, save_path):
     # outcat_name_loc = a_little_revise(outcat_name_loc)
 
     # step 1: 准备拟合数据
-    get_save_clumps_xyv(origin_name, mask_name, outcat_name_loc, points_path)
+    # get_save_clumps_xyv(origin_name, mask_name, outcat_name_loc, points_path)
 
     # step 2: 进行拟合
-    fitting_LDC_clumps(points_path, outcat_name_loc, ldc_mgm_path)
+    data_int = Data(origin_name)
+    data_rms = data_int.rms
+
+    # fitting_LDC_clumps(points_path, outcat_name_loc, data_rms, ldc_mgm_path)
 
     # step 3: 将拟合核表整理成最终核表
-    data_int = Data(origin_name)
     data_int.get_wcs()
     data_wcs = data_int.wcs
     fitting_outcat = pd.read_csv(os.path.join(ldc_mgm_path, 'fitting_outcat.csv'), sep='\t')
@@ -207,9 +209,9 @@ def LDC_para_fit_Main(outcat_name_loc, origin_name, mask_name, save_path):
 
 
 if __name__ == '__main__':
-    outcat_name_loc = r'F:\Parameter_reduction\LDC\0155+030_L\LDC_auto_loc_outcat.csv'
-    origin_name = r'F:\Parameter_reduction\LDC\0155+030_L\0155+030_L.fits'
-    mask_name = r'F:\Parameter_reduction\LDC\0155+030_L\LDC_auto_mask.fits'
-    save_path = 'fitting_result'
+    outcat_name_loc = r'F:\Parameter_reduction\LDC\0170+010_L/MGM_problem_cell/0155+030_L/LDC_auto_loc_outcat.csv'
+    origin_name = r'F:\Parameter_reduction\LDC\0170+010_L/MGM_problem_cell/0155+030_L\0155+030_L.fits'
+    mask_name = r'F:\Parameter_reduction\LDC\0170+010_L/MGM_problem_cell/0155+030_L\LDC_auto_mask.fits'
+    save_path = 'fitting_result3'
 
     LDC_para_fit_Main(outcat_name_loc, origin_name, mask_name, save_path)
