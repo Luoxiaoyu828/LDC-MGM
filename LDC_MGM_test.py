@@ -62,7 +62,7 @@ def fitting_func():
     columns_name = ['A', 'x0', 'y0', 's1', 's2', 'theta', 'v0', 's3']
     params = pd.DataFrame(params, columns=columns_name)
     params_fit_pf = multi_gauss_fitting.get_multi_gauss_params(points, params)
-    outcat_record = multi_gauss_fitting_new.get_fit_outcat_df(params_fit_pf)
+    outcat_record = multi_gauss_fitting_new.get_fit_outcat_df(params_fit_pf, data_rms)
 
     data_int = Data(origin_data_name)
     data_int.get_wcs()
