@@ -403,8 +403,8 @@ def exchange_pix2world(outcat_record, data_wcs):
         Theta, Peak, Sum, Success, Cost]
         ID: 分子云核的编号
             MWSIP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
-        Galactic Longitude: 质心的银纬 [单位：度, degree]
-        Galactic Latitude: 质心的银经  [单位：度, degree]
+        Galactic Longitude: 质心的银经  [单位：度, degree]
+        Galactic Latitude: 质心的银纬 [单位：度, degree]
         Velocity: 质心的速度           [单位：km/s]
         Size_major: 银经银纬面上的长轴 [FWHM, 半高全宽]  [单位：角分, arcsec]
         Size_minor: 银经银纬面上的短轴 [FWHM, 半高全宽]  [单位：角分, arcsec]
