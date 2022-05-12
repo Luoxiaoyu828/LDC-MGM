@@ -2,7 +2,7 @@ import os
 from DensityClust.locatDenClust2 import Data, Param, LocalDensityCluster
 
 
-def localDenCluster(data_name, mask_name=None, outcat_name=None, outcat_wcs_name=None, loc_outcat_name=None,
+def localDenCluster(data_name, rms_times, mask_name=None, outcat_name=None, outcat_wcs_name=None, loc_outcat_name=None,
                     loc_outcat_wcs_name=None, detect_log=None, fig_name=''):
     """
     LDC algorithm
@@ -22,7 +22,7 @@ def localDenCluster(data_name, mask_name=None, outcat_name=None, outcat_wcs_name
     :return:
     """
     data = Data(data_name)
-    para = Param(rms_times=5)
+    para = Param(rms_times=rms_times)
     # para.set_para(0.05, 9) # 直接设定参数值
     para.set_rms_by_data(data)
     # para.set_para_dc(dc=[1.2, 0.6, 0.6])
@@ -56,7 +56,8 @@ def LDC_fast(data_name, save_folder):
     detect_log = os.path.join(save_folder, 'LDC_auto_detect_log.txt')
     fig_name = os.path.join(save_folder, 'LDC_auto_detect_result.png')
 
-    localDenCluster(data_name, mask_name=mask_name, outcat_name=outcat_name, outcat_wcs_name=outcat_wcs_name,
+    rms_times = 3
+    localDenCluster(data_name, rms_times, mask_name=mask_name, outcat_name=outcat_name, outcat_wcs_name=outcat_wcs_name,
                     loc_outcat_name=loc_outcat_name, loc_outcat_wcs_name=loc_outcat_wcs_name, detect_log=detect_log, fig_name=fig_name)
 
 

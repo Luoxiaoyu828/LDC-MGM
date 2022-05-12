@@ -125,17 +125,16 @@ class Param:
         para.dc: Standard deviation of Gaussian filtering
     """
 
-    def __init__(self, rms_times=3):
-        rms = 0.23
-        self.rms_times = rms_times
-        self.rho_min = rms * rms_times
-        self.delta_min = 4
-        self.v_min = 27
-        self.noise = rms * 2
-        self.dc = None
-        self.gradmin = 0.01
+    def __init__(self, delta_min=4, gradmin=0.01, v_min=27, noise_times=2, rms_times=3):
+        self.v_min = v_min
+        self.gradmin = gradmin
+        self.delta_min = delta_min
         self.touch = True
         self.para_inf = None
+
+        self.noise_times = noise_times
+        self.rms_times = rms_times
+        self.dc = None
 
     def set_para_dc(self, dc):
         self.dc = dc
@@ -143,16 +142,9 @@ class Param:
     def set_rms_by_data(self, data):
         if data.state and data.rms is not None:
             self.rho_min = data.rms * self.rms_times
-            self.noise = data.rms * 2
-
-    def set_para(self, rms, v_min):
-        self.rho_min = rms * 5
-        self.delta_min = 4
-        self.v_min = v_min
-        self.noise = rms * 2
-        self.dc = None
-        self.gradmin = 0.01
-
+            self.noise = data.rms * self.noise_times
+        else:
+            raise ValueError('rms is not exists!')
 
     def summary(self):
         table_title = ['rho_min[3*rms]', 'delta_min[4]', 'v_min[27]', 'gradmin[0.01]', 'noise[2*rms]', 'dc']
