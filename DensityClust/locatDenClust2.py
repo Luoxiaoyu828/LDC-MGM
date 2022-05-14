@@ -13,6 +13,7 @@ from photutils.background import StdBackgroundRMS
 import matplotlib.pyplot as plt
 from DensityClust.clustring_subfunc import \
     get_xyz, setdiff_nd, my_print
+from Generate.fits_header import Header
 
 
 class Data:
@@ -41,11 +42,13 @@ class Data:
                 data_cube = fits.getdata(self.data_path)
                 data_cube[np.isnan(data_cube)] = 0  # 去掉NaN
                 self.data_cube = data_cube
-                self.data_header = fits.getheader(self.data_path)
-                self.state = True
-            if self.state:
                 self.shape = self.data_cube.shape
                 self.n_dim = self.data_cube.ndim
+                self.data_header = fits.getheader(self.data_path)
+                if self.data_header is None:
+                    header = Header(self.data_cube.ndim, self.data_cube.shape, self.rms)
+                    self.data_header = header.write_header()
+                self.state = True
             else:
                 print('data read error!')
         else:
