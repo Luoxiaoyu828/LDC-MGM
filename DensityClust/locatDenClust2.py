@@ -13,6 +13,7 @@ from photutils.background import StdBackgroundRMS
 import matplotlib.pyplot as plt
 from DensityClust.clustring_subfunc import \
     get_xyz, setdiff_nd, my_print
+from Generate.fits_header import Header
 
 
 class Data:
@@ -41,11 +42,10 @@ class Data:
                 data_cube = fits.getdata(self.data_path)
                 data_cube[np.isnan(data_cube)] = 0  # 去掉NaN
                 self.data_cube = data_cube
-                self.data_header = fits.getheader(self.data_path)
-                self.state = True
-            if self.state:
                 self.shape = self.data_cube.shape
                 self.n_dim = self.data_cube.ndim
+                self.data_header = fits.getheader(self.data_path)
+                self.state = True
             else:
                 print('data read error!')
         else:
@@ -68,7 +68,17 @@ class Data:
                 pass
 
             data_wcs = wcs.WCS(data_header)
-            self.wcs = data_wcs
+
+            if data_wcs.axis_type_names[0] in ['GLON', 'GLAT'] and data_wcs.axis_type_names[0] in ['GLON', 'GLAT']:
+                self.wcs = data_wcs
+            else:
+                sigma_clip = SigmaClip(sigma=3.0)
+                bkgrms = StdBackgroundRMS(sigma_clip)
+                bkgrms_value = bkgrms.calc_background_rms(self.data_cube)
+                header = Header(self.data_cube.ndim, self.data_cube.shape, bkgrms_value)
+                self.data_header = header.write_header()
+                data_wcs = wcs.WCS(self.data_header)
+                self.wcs = data_wcs
 
     def calc_background_rms(self):
         """
@@ -970,4 +980,4 @@ class LocalDensityCluster:
 
 
 if __name__ == '__main__':
-    pass
+    data = Data('../aaa.fits')

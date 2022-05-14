@@ -142,7 +142,7 @@ class Simulation:
             if os.path.exists(self.fits_header_path):
                 fits_header = fits.open(self.fits_header_path)[0].header  # 读取头文件
             else:
-                header = Header(dim=2, size=[self.size_x, self.size_y, 0], rms=rms, history_info=self.history_info,
+                header = Header(dim=2, size=[self.size_x, self.size_y], rms=rms, history_info=self.history_info,
                                 information=self.information)
                 fits_header = header.write_header()
             total = []
