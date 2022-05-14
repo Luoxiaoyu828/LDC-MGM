@@ -980,4 +980,4 @@ class LocalDensityCluster:
 
 
 if __name__ == '__main__':
-    data = Data('../aaa.fits')
+    pass
