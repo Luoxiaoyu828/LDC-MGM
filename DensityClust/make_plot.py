@@ -41,7 +41,7 @@ def make_plot_wcs_1(data_name, outcat_wcs_name, labels=None):
     else:
         fig = plt.figure(figsize=(10 * long / short, 10), dpi=100)
 
-    axes0 = fig.add_axes([0.15, 0.1, 0.7, 0.82], projection=wcs.celestial)
+    axes0 = fig.add_axes([0.1, 0.1, 0.8, 0.8], projection=wcs.celestial)
     axes0.set_xticks([])
     axes0.set_yticks([])
     im0 = axes0.imshow(data_cube.sum(axis=0))
@@ -54,7 +54,7 @@ def make_plot_wcs_1(data_name, outcat_wcs_name, labels=None):
     axes0.set_xlabel("Galactic Longitude", fontsize=12)
     axes0.set_ylabel("Galactic Latitude", fontsize=12)
     axes0.set_title(title, fontsize=12)
-    axes0.legend()
+    axes0.legend(framealpha=0.1)
     pos = axes0.get_position()
     pad = 0.01
     width = 0.02
