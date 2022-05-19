@@ -12,36 +12,49 @@ plt.rcParams['xtick.top'] = 'True'
 plt.rcParams['ytick.right'] = 'True'
 plt.rcParams['xtick.color'] = 'red'
 plt.rcParams['ytick.color'] = 'red'
+colors = ['r', 'g', 'b', 'y', 'c', 'm', 'k', 'w']
 
 
-def make_plot_wcs_1(data_name, outcat_wcs_name):
+def make_plot_wcs_1(data_name, outcat_wcs_name, labels=None):
     """
     在积分图上绘制检测结果
     :param data_name: 3d data cube fits
-    :param outcat_wcs_name: detection outcat_record
+    :param outcat_wcs_name: [list] detection outcat_record
+    :param labels: [list] picture label
     :return:
+    example:
+     >>> data_path = 'xxxx.fits'
+     >>> outcat_path = ['xxxx1.csv', 'xxxx2.csv']
+     >>> make_plot_wcs_1(data_path, outcat_path)
     """
     # sc = SkyCoord(1 * u.deg, 2 * u.deg, radial_velocity=20 * u.km / u.s)
+    if not isinstance(outcat_wcs_name, list):
+        raise ValueError('outcat_wcs_name must be list')
     fits_path = data_name.replace('.fits', '')
     title = fits_path.split('\\')[-1]
 
-    outcat_wcs = pd.read_csv(outcat_wcs_name, sep='\t')
     wcs = get_wcs(data_name)
     data_cube = fits.getdata(data_name)
-
-    fig = plt.figure(figsize=(10, 8.5), dpi=100)
+    long, short = data_cube.sum(axis=0).shape
+    if long > short:
+        fig = plt.figure(figsize=(10, 10 * short / long), dpi=100)
+    else:
+        fig = plt.figure(figsize=(10 * long / short, 10), dpi=100)
 
     axes0 = fig.add_axes([0.15, 0.1, 0.7, 0.82], projection=wcs.celestial)
     axes0.set_xticks([])
     axes0.set_yticks([])
     im0 = axes0.imshow(data_cube.sum(axis=0))
-    if outcat_wcs.values.shape[0] > 0:
-        outcat_wcs_c = SkyCoord(frame="galactic", l=outcat_wcs['Cen1'].values, b=outcat_wcs['Cen2'].values, unit="deg")
-        axes0.plot_coord(outcat_wcs_c, 'r*', markersize=5)
+    for i in range(len(outcat_wcs_name)):
+        outcat_wcs = pd.read_csv(outcat_wcs_name[i], sep='\t')
+        if outcat_wcs.values.shape[0] > 0:
+            outcat_wcs_c = SkyCoord(frame="galactic", l=outcat_wcs['Cen1'].values, b=outcat_wcs['Cen2'].values, unit="deg")
+            axes0.plot_coord(outcat_wcs_c, '*', label='algorithm %d' % (i + 1) if labels is None else labels[i], color=colors[i], markersize=5)
 
     axes0.set_xlabel("Galactic Longitude", fontsize=12)
     axes0.set_ylabel("Galactic Latitude", fontsize=12)
     axes0.set_title(title, fontsize=12)
+    axes0.legend()
     pos = axes0.get_position()
     pad = 0.01
     width = 0.02
@@ -49,6 +62,7 @@ def make_plot_wcs_1(data_name, outcat_wcs_name):
 
     cbar = fig.colorbar(im0, cax=axes1)
     cbar.set_label('K m s${}^{-1}$')
+    plt.show()
 
 
 def make_plot(outcat_name, data, lable_num=False):
@@ -152,4 +166,4 @@ def plot_match():
 
 
 if __name__ == '__main__':
-        pass
+    pass
