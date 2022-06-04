@@ -4,6 +4,7 @@ from astropy.io import fits
 import pandas as pd
 import matplotlib.pyplot as plt
 import shutil
+from astropy.coordinates import SkyCoord
 from DensityClust.locatDenClust2 import DetectResult, Data
 from DensityClust.locatDenClust2 import LocalDensityCluster as LDC
 
@@ -170,7 +171,7 @@ def move_csv_png(csv_png_folder):
             shutil.move(item_or, item_ob)
 
 
-def restruct_fitting_outcat(csv_png_folder):
+def restruct_fitting_outcat(csv_png_folder, fitting_outcat_path=None):
     csv_folder = os.path.join(csv_png_folder, 'csv')
     csv_path_ob = [os.path.join(csv_folder, item) for item in os.listdir(csv_folder) if item[-7:-4].isalnum()]
     outcat_df = pd.DataFrame([])
@@ -179,7 +180,13 @@ def restruct_fitting_outcat(csv_png_folder):
         outcat_df = pd.concat([outcat_df, outcat_item], axis=0)
 
     fitting_outcat = outcat_df.sort_values(by='ID')
-    fitting_outcat.to_csv(os.path.join(csv_png_folder, 'fitting_outcat.csv'), sep='\t', index=False)
+    if fitting_outcat_path is None:
+        fitting_outcat_path = os.path.join(csv_png_folder, os.path.pardir)
+        fitting_outcat_path = os.path.abspath(fitting_outcat_path)
+        fitting_outcat_path = os.path.join(fitting_outcat_path, 'Fitting_outcat.csv')
+
+    fitting_outcat.to_csv(fitting_outcat_path, sep='\t', index=False)
+    return fitting_outcat_path
 
 
 def pix2wcs_show_result():

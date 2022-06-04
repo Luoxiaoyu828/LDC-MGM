@@ -79,7 +79,7 @@ if __name__ == '__main__':
     mask_name = r'0170+010_L/error_data_for_fitting/data/gaussian_out_000/LDC_auto_mask.fits' #　LDC Mask
     save_path = '0170+010_L/error_data_for_fitting/data/fitting_result1' # 参数还原保存位置
 
-    mgm.LDC_para_fit_Main(outcat_name_loc, origin_name, mask_name, save_path)
+    mgm.MGM_main(outcat_name_loc, origin_name, mask_name, save_path)
 
 
 

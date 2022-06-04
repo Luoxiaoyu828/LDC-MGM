@@ -9,7 +9,7 @@ from scipy import ndimage
 import pandas as pd
 import time
 from astropy.stats import SigmaClip
-from photutils.background import StdBackgroundRMS
+# from photutils.background import StdBackgroundRMS  # 取消掉计算rms的步骤
 import matplotlib.pyplot as plt
 from DensityClust.clustring_subfunc import \
     get_xyz, setdiff_nd, my_print
@@ -27,12 +27,11 @@ class Data:
         self.state = False
         self.n_dim = None
         self.file_type = None
-        # self.rms_ = None
         self.data_header = None
         self.data_inf = None
         self.read_file()
-        self.get_wcs()
         self.calc_background_rms()
+        self.get_wcs()
 
     def read_file(self):
         if os.path.exists(self.data_path):
@@ -50,35 +49,6 @@ class Data:
                 print('data read error!')
         else:
             print('the file not exists!')
-
-    def get_wcs(self):
-        """
-        得到wcs信息
-        :return:
-        data_wcs
-        """
-        if self.exist_file:
-            data_header = self.data_header
-            keys = data_header.keys()
-            try:
-                key = [k for k in keys if k.endswith('4')]
-                [data_header.remove(k) for k in key]
-                data_header.remove('VELREF')
-            except KeyError:
-                pass
-
-            data_wcs = wcs.WCS(data_header)
-
-            if data_wcs.axis_type_names[0] in ['GLON', 'GLAT'] and data_wcs.axis_type_names[0] in ['GLON', 'GLAT']:
-                self.wcs = data_wcs
-            else:
-                sigma_clip = SigmaClip(sigma=3.0)
-                bkgrms = StdBackgroundRMS(sigma_clip)
-                bkgrms_value = bkgrms.calc_background_rms(self.data_cube)
-                header = Header(self.data_cube.ndim, self.data_cube.shape, bkgrms_value)
-                self.data_header = header.write_header()
-                data_wcs = wcs.WCS(self.data_header)
-                self.wcs = data_wcs
 
     def calc_background_rms(self):
         """
@@ -107,6 +77,35 @@ class Data:
             else:
                 print('the data header not have rms, and the rms of data is set 0.23.\n')
                 self.rms = 0.23
+                
+    def get_wcs(self):
+        """
+        得到wcs信息
+        :return:
+        data_wcs
+        """
+        if self.exist_file:
+            data_header = self.data_header
+            keys = data_header.keys()
+            try:
+                key = [k for k in keys if k.endswith('4')]
+                [data_header.remove(k) for k in key]
+                data_header.remove('VELREF')
+            except KeyError:
+                pass
+
+            data_wcs = wcs.WCS(data_header)
+
+            if data_wcs.axis_type_names[0] in ['GLON', 'GLAT'] and data_wcs.axis_type_names[0] in ['GLON', 'GLAT']:
+                self.wcs = data_wcs
+            else:
+                # sigma_clip = SigmaClip(sigma=3.0)
+                # bkgrms = StdBackgroundRMS(sigma_clip)
+                # bkgrms_value = bkgrms.calc_background_rms(self.data_cube)
+                header = Header(self.data_cube.ndim, self.data_cube.shape, self.rms)
+                self.data_header = header.write_header()
+                data_wcs = wcs.WCS(self.data_header)
+                self.wcs = data_wcs  
 
     def summary(self):
         print('=' * 30)
@@ -136,6 +135,8 @@ class Param:
     """
 
     def __init__(self, delta_min=4, gradmin=0.01, v_min=27, noise_times=2, rms_times=3):
+        self.noise = None
+        self.rho_min = None
         self.v_min = v_min
         self.gradmin = gradmin
         self.delta_min = delta_min
@@ -145,9 +146,6 @@ class Param:
         self.noise_times = noise_times
         self.rms_times = rms_times
         self.dc = None
-
-    def set_para_dc(self, dc):
-        self.dc = dc
 
     def set_rms_by_data(self, data):
         if data.state and data.rms is not None:
