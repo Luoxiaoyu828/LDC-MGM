@@ -211,6 +211,6 @@ if __name__ == '__main__':
     outcat_name_loc = r'F:\Parameter_reduction\LDC\0170+010_L/MGM_problem_cell/0155+030_L/LDC_auto_loc_outcat.csv'
     origin_name = r'F:\Parameter_reduction\LDC\0170+010_L/MGM_problem_cell/0155+030_L\0155+030_L.fits'
     mask_name = r'F:\Parameter_reduction\LDC\0170+010_L/MGM_problem_cell/0155+030_L\LDC_auto_mask.fits'
-    save_path = 'fitting_result3'
+    save_path = 'fitting_result5'
 
     LDC_para_fit_Main(outcat_name_loc, origin_name, mask_name, save_path)

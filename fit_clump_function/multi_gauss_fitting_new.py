@@ -349,6 +349,7 @@ def get_fit_outcat_df(params_fit_pf, data_rms):
         Y = func(Xin.flatten(), Yin.flatten(), Vin.flatten())
         Y_threshold = func(x_lim[0], pfsc_1['y0'], pfsc_1['v0'])  # 计算云核边界阈值
         clump_volume = np.where(Y >= Y_threshold)[0].shape[0]
+        # print(Y_threshold,clump_volume)
 
         clumps_Flux_SNR[i, 0] = integrate_result[0] / (data_rms * clump_volume**0.5)
         clumps_Peak_SNR[i, 0] = pfsc_1['A'] / data_rms
