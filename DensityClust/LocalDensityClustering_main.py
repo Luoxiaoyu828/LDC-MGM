@@ -2,8 +2,8 @@ import os
 from DensityClust.locatDenClust2 import Data, Param, LocalDensityCluster
 
 
-def localDenCluster(data_name, rms_times, mask_name=None, outcat_name=None, outcat_wcs_name=None, loc_outcat_name=None,
-                    loc_outcat_wcs_name=None, detect_log=None, fig_name=''):
+def localDenCluster(data_name, mask_name=None, outcat_name=None, outcat_wcs_name=None, loc_outcat_name=None,
+                    loc_outcat_wcs_name=None, detect_log=None, fig_name='', paras_set=None):
     """
     LDC algorithm
     :param data_name: 待检测数据的路径(str)，fits文件
@@ -19,13 +19,16 @@ def localDenCluster(data_name, rms_times, mask_name=None, outcat_name=None, outc
     :param loc_outcat_name: 基于像素单位的局部区域核表保存路径(str) [*.csv]
     :param loc_outcat_wcs_name: 基于wcs的局部区域核表保存路径(str) [*.csv]
     :param detect_log: 检测中的信息保存文件(str) [*.txt]
+    :param flags: 代码调用还是软件界面调用，默认为True(代码调用)
     :return:
     """
     data = Data(data_name)
-    para = Param(rms_times=rms_times)
-    # para.set_para(0.05, 9) # 直接设定参数值
+
+    para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=2, rms_times=3)
     para.set_rms_by_data(data)
-    # para.set_para_dc(dc=[1.2, 0.6, 0.6])
+
+    if paras_set is not None:
+        para.set_para(paras_set)
 
     ldc = LocalDensityCluster(data=data, para=para)
     ldc.detect()
@@ -56,8 +59,7 @@ def LDC_fast(data_name, save_folder):
     detect_log = os.path.join(save_folder, 'LDC_auto_detect_log.txt')
     fig_name = os.path.join(save_folder, 'LDC_auto_detect_result.png')
 
-    rms_times = 3
-    localDenCluster(data_name, rms_times, mask_name=mask_name, outcat_name=outcat_name, outcat_wcs_name=outcat_wcs_name,
+    localDenCluster(data_name, mask_name=mask_name, outcat_name=outcat_name, outcat_wcs_name=outcat_wcs_name,
                     loc_outcat_name=loc_outcat_name, loc_outcat_wcs_name=loc_outcat_wcs_name, detect_log=detect_log, fig_name=fig_name)
 
 

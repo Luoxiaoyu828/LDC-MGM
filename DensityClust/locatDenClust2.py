@@ -8,7 +8,7 @@ from skimage import measure
 from scipy import ndimage
 import pandas as pd
 import time
-from astropy.stats import SigmaClip
+# from astropy.stats import SigmaClip
 # from photutils.background import StdBackgroundRMS  # 取消掉计算rms的步骤
 import matplotlib.pyplot as plt
 from DensityClust.clustring_subfunc import \
@@ -153,6 +153,13 @@ class Param:
             self.noise = data.rms * self.noise_times
         else:
             raise ValueError('rms is not exists!')
+
+    def set_para(self, paras_set):
+        self.rho_min = paras_set['rho_min']
+        self.v_min = paras_set['v_min']
+        self.gradmin = paras_set['gradmin']
+        self.delta_min = paras_set['delta_min']
+        self.noise = paras_set['noise']
 
     def summary(self):
         table_title = ['rho_min[3*rms]', 'delta_min[4]', 'v_min[27]', 'gradmin[0.01]', 'noise[2*rms]', 'dc']
