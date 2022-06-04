@@ -1,20 +1,15 @@
 ### Multi-Gaussian Model for fitting the clump detected by LDC
 #### Usage
 ```
-from fit_clump_function import main_fit_gauss_3d as mgm
-from tools.ultil_lxy import create_folder
-import os
+from main_fit_gauss_3d import MGM_main
 
 
-outcat_name_loc = r'/home/data/clumps_share/data_luoxy/detect_R16_LDC/R16_LDC_auto/R16_200_detect/1805+000_L/LDC_auto_loc_outcat.csv'
-origin_name = r'/home/data/clumps_share/MWISP/R16_200/1805+000/1805+000_L.fits'
-mask_name = r'/home/data/clumps_share/data_luoxy/detect_R16_LDC/R16_LDC_auto/R16_200_detect/1805+000_L/LDC_auto_mask.fits'
+outcat_name_loc = r'F:\Parameter_reduction\LDC\0170+010_L/MGM_problem_cell/0155+030_L/LDC_auto_loc_outcat.csv'
+origin_name = r'F:\Parameter_reduction\LDC\0170+010_L/MGM_problem_cell/0155+030_L\0155+030_L.fits'
+mask_name = r'F:\Parameter_reduction\LDC\0170+010_L/MGM_problem_cell/0155+030_L\LDC_auto_mask.fits'
+save_path = 'fitting_result7'
 
-R2_200_fitting_path = create_folder(r'/home/data/clumps_share/data_luoxy/detect_R16_LDC/R16_LDC_auto/R16_200_MGM')
-item = '1805_000_L'
-save_path = create_folder(os.path.join(R2_200_fitting_path, item))
-
-mgm.LDC_para_fit_Main(outcat_name_loc, origin_name, mask_name,save_path)
+MGM_main(outcat_name_loc, origin_name, mask_name, save_path)
 ```
 #### Result
 You can find the structure of folder if the code runs runs successfully.
@@ -29,10 +24,10 @@ ID	Galactic_Longitude	Galactic_Latitude	Velocity	Size_major	Size_minor	Size_velo
     ├── LDC_MGM_outcat
     │   ├── csv
     │   │   └── fit_item000.csv
-    │   ├── fitting_outcat.csv
-    │   └── png
+    │   ├── png
     │       └── touch_clumps_000.png
     ├── MWISP_outcat.csv
+    ├── Fitting_outcat.csv
     └── points
         └── clump_id_xyz_intensity_0004.csv
 

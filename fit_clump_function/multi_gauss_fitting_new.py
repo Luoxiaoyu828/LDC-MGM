@@ -1,5 +1,4 @@
 import numpy as np
-import time
 import pandas as pd
 from scipy import optimize
 from scipy import integrate
@@ -215,7 +214,7 @@ def fitting_multi_gauss_params(points_all_df, params_init, ndim=3):
     low_ = []
     up_ = []
     if ndim == 2:
-        columns_name = ['A', 'x0', 'y0', 's1', 's2', 'theta']
+        columns_name = ['A', 'x0', 'y0', 's1', 's2', 'Theta']
         param_num = 6
         gauss_num = params_init.shape[0] // param_num
         X = points_all_df['x_2'].values
@@ -227,7 +226,7 @@ def fitting_multi_gauss_params(points_all_df, params_init, ndim=3):
         [low_.extend([0, 20, 20, 0, 0, 0]) for _ in range(gauss_num)]
         [up_.extend([20, 100, 100, 20, 20, 7]) for _ in range(gauss_num)]
     elif ndim == 3:
-        columns_name = ['A', 'x0', 'y0', 's1', 's2', 'theta', 'v0', 's3']
+        columns_name = ['A', 'x0', 'y0', 's1', 's2', 'Theta', 'v0', 's3']
         param_num = 8
         X = points_all_df['x_2'].values
         Y = points_all_df['y_1'].values
@@ -244,14 +243,25 @@ def fitting_multi_gauss_params(points_all_df, params_init, ndim=3):
     gauss_num = params_init.shape[0] // param_num
     res_robust = optimize.least_squares(errorfunc, x0=params_init, loss='soft_l1', bounds=[low_, up_], f_scale=0.1)
     params_fit = res_robust.x
+
+    if ndim == 2:
+        func_fit = get_multi_gauss_func_by_params(params_fit, ndim=ndim)
+        fit_value = func_fit(X, Y)
+    elif ndim == 3:
+        func_fit = get_multi_gauss_func_by_params(params_fit, ndim=ndim)
+        fit_value = func_fit(X, Y, V)
+    else:
+        print('only fitting 2d or 3d gauss!')
+        return
     success = res_robust['success']
-    cost = res_robust['cost']
+    points_num = points_all_df.shape[0]
+    cost = np.sqrt(((fit_value - Intensity)**2).sum()) / points_num   # 均方差平方和
 
     params_fit = params_fit.reshape([gauss_num, param_num])
     params_fit_df = pd.DataFrame(params_fit, columns=columns_name)
 
-    params_fit_df['success'] = success  # 拟合是否成功
-    params_fit_df['cost'] = cost  # 拟合的代价函数
+    params_fit_df['Success'] = success  # 拟合是否成功
+    params_fit_df['Cost'] = cost  # 拟合的代价函数
 
     return params_fit_df
 
@@ -276,14 +286,14 @@ def get_fit_outcat_df(params_fit_pf, data_rms):
     'Cen1', 'Cen2', ['Cen3']: 质心位置坐标
     'Size1', 'Size2', ['Size3']: 云核的轴长[FWHM=2.3548*sigma]
         对拟合的结果进行整理：将size1设置为(size1, size2)中的较大的值，对应
-    'theta': 云核在银经银纬面上的旋转角 [0-->180度]
+    'Theta': 云核在银经银纬面上的旋转角 [0-->180度]
         从正北方向向逆时针方向旋转到分子云核的长轴位置之间的夹角，正北方向指：图片的竖直的边
         if size1 > size2 --> theta = theta
         if size1 < size2 --> theta = (theta + 90) % 180
     'Peak': 云核的峰值
     'Sum': 云核的总流量
-    'success': 拟合是否成功
-    'cost': 拟合函数和实际数据间的误差
+    'Success': 拟合是否成功
+    'Cost': 拟合函数和实际数据间的误差
     'Peak_SNR': 峰值信噪比
     'Flux_SNR': 信噪比
     """
@@ -291,7 +301,7 @@ def get_fit_outcat_df(params_fit_pf, data_rms):
         print('the params_fit_pf type must be pandas.DataFrame.')
         raise TypeError
 
-    interg_rg = 5  # 对云核表达式进行积分时，前后移动轴长的倍数
+    interg_rg = 3  # 对云核表达式进行积分时，前后移动轴长的倍数
 
     clumps_num, params_num = params_fit_pf.shape  # 分子云核个数, 参数个数
     outcat_record = pd.DataFrame([])
@@ -309,8 +319,8 @@ def get_fit_outcat_df(params_fit_pf, data_rms):
         Size_item = ['Size1', 'Size2', 'Size3']
         xyv_0 = ['x0', 'y0', 'v0']
         s_123 = ['s1', 's2', 's3']
-        outcat_record_order = ['ID', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'theta', 'Peak', 'Sum',
-                               'Flux_SNR', 'Peak_SNR', 'success', 'cost']
+        outcat_record_order = ['ID', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'Theta', 'Peak', 'Sum',
+                               'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']
     elif case_2d:
         p_num = 6
         n_dim_ = 2
@@ -318,8 +328,8 @@ def get_fit_outcat_df(params_fit_pf, data_rms):
         Size_item = ['Size1', 'Size2']
         xyv_0 = ['x0', 'y0']
         s_123 = ['s1', 's2']
-        outcat_record_order = ['ID', 'Cen1', 'Cen2', 'Size1', 'Size2', 'theta', 'Peak', 'Sum', 'Flux_SNR', 'Peak_SNR',
-                               'success', 'cost']
+        outcat_record_order = ['ID', 'Cen1', 'Cen2', 'Size1', 'Size2', 'Theta', 'Peak', 'Sum', 'Flux_SNR', 'Peak_SNR',
+                               'Success', 'Cost']
     else:
         print('only get 2d or 3d outcat_record!')
         raise AttributeError
@@ -347,16 +357,16 @@ def get_fit_outcat_df(params_fit_pf, data_rms):
 
         Xin, Yin, Vin = np.mgrid[x_lim[0]: x_lim[1], y_lim[0]: y_lim[1], v_lim[0]: v_lim[1]]
         Y = func(Xin.flatten(), Yin.flatten(), Vin.flatten())
-        Y_threshold = func(x_lim[0], pfsc_1['y0'], pfsc_1['v0'])  # 计算云核边界阈值
+        # Y_threshold = func(x_lim[0], pfsc_1['y0'], pfsc_1['v0'])  # 计算云核边界阈值
+        Y_threshold = data_rms   # 计算云核边界阈值,以rms为界
         clump_volume = np.where(Y >= Y_threshold)[0].shape[0]
-        # print(Y_threshold,clump_volume)
 
         clumps_Flux_SNR[i, 0] = integrate_result[0] / (data_rms * clump_volume**0.5)
         clumps_Peak_SNR[i, 0] = pfsc_1['A'] / data_rms
 
     outcat_record['ID'] = np.array([i for i in range(clumps_num)])
-    outcat_record[['Peak', 'success', 'cost']] = params_fit_pf[['A', 'success', 'cost']]
-    outcat_record['theta'] = np.rad2deg(params_fit_pf['theta'].values) % 180  # 求得的角度需要用180取余
+    outcat_record[['Peak', 'Success', 'Cost']] = params_fit_pf[['A', 'Success', 'Cost']]
+    outcat_record['Theta'] = np.rad2deg(params_fit_pf['Theta'].values) % 180  # 求得的角度需要用180取余
     outcat_record[['Sum']] = clumps_sum
     outcat_record[['Flux_SNR']] = clumps_Flux_SNR
     outcat_record[['Peak_SNR']] = clumps_Peak_SNR
@@ -367,7 +377,7 @@ def get_fit_outcat_df(params_fit_pf, data_rms):
 
     # 将银经银纬面上的主轴和次主轴区分开，并将角度对应的修正
     size_1_2 = outcat_record[['Size1', 'Size2']].values
-    theta = outcat_record['theta'].values
+    theta = outcat_record['Theta'].values
     idex = np.where(size_1_2[:, 0] < size_1_2[:, 1])[0]
 
     theta[idex] = (theta[idex] + 90) % 180
@@ -376,7 +386,7 @@ def get_fit_outcat_df(params_fit_pf, data_rms):
 
     outcat_record['Size1'] = size_1_2_major
     outcat_record['Size2'] = size_1_2_minor
-    outcat_record['theta'] = theta
+    outcat_record['Theta'] = theta
 
     return outcat_record
 
@@ -439,13 +449,14 @@ def exchange_pix2world(outcat_record, data_wcs):
         for item_l, item_b in zip(cen1, cen2):
             str_l = 'MWSIP' + ('%.03f' % item_l).rjust(7, '0')
             if item_b < 0:
-                str_b = '-' + ('%.03f' % abs(item_b)).rjust(6, '0')
+                str_b = '-' + ('%.02f' % abs(item_b)).rjust(5, '0')
             else:
-                str_b = '+' + ('%.03f' % abs(item_b)).rjust(6, '0')
+                str_b = '+' + ('%.02f' % abs(item_b)).rjust(5, '0')
             id_clumps.append(str_l + str_b)
         id_clumps = np.array(id_clumps)
-        table_title_re = ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Size_major', 'Size_minor',
-                          'Theta', 'Peak', 'Flux', 'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']
+        table_title_re = ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Size_major', 'Size_minor', 'Theta', 'Peak',
+                          'Flux', 'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']
+
     elif 'Cen3' in table_title:
         # 3d result
         cen1, cen2, cen3 = data_wcs.all_pix2world(outcat_record['Cen1'], outcat_record['Cen2'],
@@ -459,15 +470,15 @@ def exchange_pix2world(outcat_record, data_wcs):
 
         id_clumps = []  # MWISP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
         for item_l, item_b, item_v in zip(cen1, cen2, cen3 / 1000):
-            str_l = 'MWISP' + ('%.03f' % item_l).rjust(7, '0')
+            str_l = 'MWISP' + ('%03.03f' % item_l).rjust(7, '0')
             if item_b < 0:
-                str_b = '-' + ('%.03f' % abs(item_b)).rjust(6, '0')
+                str_b = '-' + ('%.02f' % abs(item_b)).rjust(5, '0')
             else:
-                str_b = '+' + ('%.03f' % abs(item_b)).rjust(6, '0')
+                str_b = '+' + ('%.02f' % abs(item_b)).rjust(5, '0')
             if item_v < 0:
-                str_v = '-' + ('%.03f' % abs(item_v)).rjust(6, '0')
+                str_v = '-' + ('%.01f' % abs(item_v)).rjust(5, '0')
             else:
-                str_v = '+' + ('%.03f' % abs(item_v)).rjust(6, '0')
+                str_v = '+' + ('%.01f' % abs(item_v)).rjust(5, '0')
             id_clumps.append(str_l + str_b + str_v)
         id_clumps = np.array(id_clumps)
         table_title_re = ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Velocity', 'Size_major', 'Size_minor',
@@ -481,10 +492,7 @@ def exchange_pix2world(outcat_record, data_wcs):
         ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Velocity', 'Size_major', 'Size_minor', 'Size_velocity',
          'Peak', 'Flux']] = np.column_stack([id_clumps, clump_Cen, clustSize, clustPeak, clustSum])
     outcat_wcs[['Theta', 'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']] = outcat_record[
-        ['theta', 'Flux_SNR', 'Peak_SNR', 'success', 'cost']]
-    outcat_wcs = outcat_wcs.round(
-        {'Galactic_Longitude': 2, 'Galactic_Latitude': 2, 'Velocity': 2, 'Size_major': 1, 'Size_minor': 1,
-         'Size_velocity': 2, 'Peak': 2, 'Flux': 2, 'Flux_SNR': 2, 'Peak_SNR': 2})
+        ['Theta', 'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']]
 
     return outcat_wcs
 
@@ -522,7 +530,7 @@ def fitting_main(points_all_df, params_init, clumps_id, data_rms, ndim=3):
         outcat_record['ID'] = clumps_id
         outcat_record = outcat_record.round(
             {'ID': 0, 'Peak1': 2, 'Peak2': 2, 'Peak3': 2, 'Cen1': 2, 'Cen2': 2, 'Cen3': 2,
-             'Size1': 2, 'Size2': 2, 'Size3': 2, 'theta': 2, 'Peak': 2, 'Sum': 2})
+             'Size1': 2, 'Size2': 2, 'Size3': 2, 'Theta': 2, 'Peak': 2, 'Sum': 2})
         return outcat_record
     else:
         raise TypeError
