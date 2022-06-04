@@ -120,17 +120,23 @@ def MGM_main(outcat_name_loc, origin_name, mask_name, save_path):
     data_int.get_wcs()
     data_wcs = data_int.wcs
     fitting_outcat = pd.read_csv(fitting_outcat_path, sep='\t')
-    MWISP_outcat_df = multi_gauss_fitting_new.exchange_pix2world(fitting_outcat, data_wcs)
-    MWISP_outcat_df = MWISP_outcat_df.round(
-        {'Galactic_Longitude': 4, 'Galactic_Latitude': 4, 'Velocity': 2, 'Size_major': 0, 'Size_minor': 0,
-         'Size_velocity': 2, 'Peak': 1, 'Flux': 1, 'Flux_SNR': 1, 'Peak_SNR': 1, 'theta': 0})
-    MWISP_outcat_df.to_csv(MWISP_outcat_path, sep='\t', index=False)
+    MWISP_outcat = multi_gauss_fitting_new.exchange_pix2world(fitting_outcat, data_wcs)
+
+    MWISP_outcat.to_csv(MWISP_outcat_path, sep='\t', index=False)
+
+    aa = pd.read_csv(MWISP_outcat_path, sep='\t')
+    MWISP_outcat = aa.round(
+        {'Galactic_Longitude': 3, 'Galactic_Latitude': 3, 'Velocity': 2, 'Size_major': 0, 'Size_minor': 0,
+         'Size_velocity': 2, 'Peak': 1, 'Flux': 1, 'Flux_SNR': 1, 'Peak_SNR': 1, 'Theta': 0})
+    if os.path.exists(MWISP_outcat_path):
+        os.remove(MWISP_outcat_path)
+    MWISP_outcat.to_csv(MWISP_outcat_path, sep='\t', index=False)
 
 
 if __name__ == '__main__':
     outcat_name_loc = r'F:\Parameter_reduction\LDC\0170+010_L/MGM_problem_cell/0155+030_L/LDC_auto_loc_outcat.csv'
     origin_name = r'F:\Parameter_reduction\LDC\0170+010_L/MGM_problem_cell/0155+030_L\0155+030_L.fits'
     mask_name = r'F:\Parameter_reduction\LDC\0170+010_L/MGM_problem_cell/0155+030_L\LDC_auto_mask.fits'
-    save_path = 'fitting_result7'
+    save_path = 'fitting_result1'
 
     MGM_main(outcat_name_loc, origin_name, mask_name, save_path)
