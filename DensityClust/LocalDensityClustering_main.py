@@ -1,5 +1,6 @@
 import os
-from DensityClust.locatDenClust2 import Data, Param, LocalDensityCluster
+# from DensityClust.locatDenClust3 import Data, Param, LocalDensityCluster
+from DensityClust.localDenClust4 import Data, Param, LocalDensityCluster
 
 
 def localDenCluster(data_name, mask_name=None, outcat_name=None, outcat_wcs_name=None, loc_outcat_name=None,
@@ -24,7 +25,7 @@ def localDenCluster(data_name, mask_name=None, outcat_name=None, outcat_wcs_name
     """
     data = Data(data_name)
 
-    para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=2, rms_times=3)
+    para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=2, rms_times=5)
     para.set_rms_by_data(data)
 
     if paras_set is not None:
