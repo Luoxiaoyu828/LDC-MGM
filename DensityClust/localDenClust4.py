@@ -535,8 +535,8 @@ class LocalDensityCluster:
 
     def extro_record(self, label_data):
         print('props')
-        dim = self.data.n_dim
-        props = measure.regionprops_table(label_image=label_data, intensity_image=self.data,
+        dim = self.data.data_cube.n_dim
+        props = measure.regionprops_table(label_image=label_data, intensity_image=self.data.data_cube,
                                           properties=['weighted_centroid', 'area', 'mean_intensity',
                                                       'weighted_moments_central', 'max_intensity',
                                                       'image_intensity', 'bbox'])
