@@ -350,6 +350,8 @@ class LocalDensityCluster:
     def __init__(self, data, para):
         # 参数初始化
 
+        self.rho_up = None
+        self.kd_ND = None
         self.rho = None
         self.idx_rho = None
         self.data = data
@@ -399,12 +401,13 @@ class LocalDensityCluster:
             data_esmit_rr = self.esti_rho_item(data_esmit, dc_len)
         return data_esmit_rr
 
-    def build_kd_tree(self, rho):
-        aa = self.xx[rho > self.para.noise]
+    def build_kd_tree(self):
+        aa = self.xx[self.rho > self.para.noise]
         kd_tree = kdt(aa)
-        rho_up = rho[rho > self.para.noise]
-        self.idx_rho = np.where(rho > self.para.noise)[0]
-        return kd_tree, rho_up
+        self.rho_up = self.rho[self.rho > self.para.noise]
+        self.idx_rho = np.where(self.rho > self.para.noise)[0]
+        self.kd_ND = aa.shape[0]
+        return kd_tree
 
     def detect(self):
         t0_ = time.time()
@@ -419,29 +422,32 @@ class LocalDensityCluster:
 
         self.rho = data_estim.flatten()
         rho_Ind = np.argsort(-1 * self.rho)
-        # delta 记录距离，
-        # IndNearNeigh 记录：两个密度点的联系 % index of nearest neighbor with higher density
-        self.delta = np.zeros(self.ND, np.float32)  # np.iinfo(np.int32).max-->2147483647-->1290**3
-        self.IndNearNeigh = np.zeros(self.ND, np.int64) + self.ND
-        self.Gradient = np.zeros(self.ND, np.float32)
+
         #
         # self.delta[rho_Ind[0]] = self.maxed
         # self.IndNearNeigh[rho_Ind[0]] = rho_Ind[0]
         my_print('First step: calculating rho, delta and Gradient.' + '-' * 20, vosbe_=self.vosbe)
 
-        kd_tree, rho_up = self.build_kd_tree(self.rho)
+        kd_tree = self.build_kd_tree()
+
+        kd_ND = self.kd_ND
+        # delta 记录距离，
+        # IndNearNeigh 记录：两个密度点的联系 % index of nearest neighbor with higher density
+        self.delta = np.zeros(kd_ND, np.float32)  # np.iinfo(np.int32).max-->2147483647-->1290**3
+        self.IndNearNeigh = np.zeros(kd_ND, np.int64) + kd_ND
+        self.Gradient = np.zeros(kd_ND, np.float32)
+
         for point_ii_xy in tqdm.tqdm(kd_tree.data):
             idex1 = kd_tree.query_ball_point(point_ii_xy, r=delta_min + 0.0001, workers=4)
             idex_ii = kd_tree.query_ball_point(point_ii_xy, r=0.0001, workers=4)
-            idex_ii_gb = self.idx_rho[idex_ii]
-            rho_ii = rho_up[idex_ii]
+            rho_ii = self.rho_up[idex_ii]
             if len(idex1) <= 1:
-                self.delta[idex_ii_gb] = delta_min + 0.0001
-                self.Gradient[idex_ii_gb] = -1
-                self.IndNearNeigh[idex_ii_gb] = self.ND
+                self.delta[idex_ii] = delta_min + 0.0001
+                self.Gradient[idex_ii] = -1
+                self.IndNearNeigh[idex_ii] = kd_ND
             else:
                 bt_points = kd_tree.data[idex1]
-                rho_points = rho_up[idex1]
+                rho_points = self.rho_up[idex1]
 
                 distance_each = ((bt_points - point_ii_xy) ** 2).sum(1)
                 distance_each[rho_points <= rho_ii] = (delta_min + 0.001) ** 2
@@ -451,16 +457,18 @@ class LocalDensityCluster:
 
                 dist_i_j = distance_each.min() ** 0.5
                 gradient = (rho_jj - rho_ii) / dist_i_j
-                self.delta[idex_ii_gb] = dist_i_j
-                self.Gradient[idex_ii_gb] = gradient
-                self.IndNearNeigh[idex_ii_gb] = self.idx_rho[idex1[dis_min_idx]]
+                self.delta[idex_ii] = dist_i_j
+                self.Gradient[idex_ii] = gradient
+                self.IndNearNeigh[idex_ii] = idex1[dis_min_idx]
         t1_ = time.time()
 
         my_print(' ' * 10 + 'delata, rho and Gradient are calculated, using %.2f seconds.' % (t1_ - t0_), self.vosbe)
         self.result.calculate_time[0] = t1_ - t0_
 
         t0_ = time.time()
-        loc_LDC_outcat, LDC_outcat, mask = self.extra_outcat(rho_Ind)
+        mask = self.extra_mask(rho_Ind)
+        loc_LDC_outcat, LDC_outcat = self.extro_record(mask)
+
         t1_ = time.time()
         self.result.calculate_time[1] = t1_ - t0_
         my_print(' ' * 10 + 'Outcats are calculated, using %.2f seconds.' % (t1_ - t0_), self.vosbe)
@@ -496,42 +504,39 @@ class LocalDensityCluster:
             clust_id += 1
         return clusterInd_
 
-    def extra_outcat(self, rho_Ind):
+    def extra_mask(self, rho_Ind):
         deltamin = self.para.delta_min
         data = self.data.data_cube
         dim = self.data.n_dim
 
         my_print('Second step: calculating Outcats.' + '-' * 30, self.vosbe)
         # 根据密度和距离来确定类中心
-        clusterInd = -1 * np.ones(self.ND + 1)
-        clust_index = np.intersect1d(np.where(self.rho > self.para.rho_min), np.where(self.delta > deltamin))
+        clusterInd = -1 * np.ones(self.kd_ND + 1)
+        clust_index = np.intersect1d(np.where(self.rho_up > self.para.rho_min), np.where(self.delta > deltamin))
+        # clust_index 是用来记录第i个类中心在xx中的索引值
+        for clump_i, ii in enumerate(clust_index):
+            clusterInd[ii] = clump_i + 1
 
-        clust_num = len(clust_index)
-        # icl是用来记录第i个类中心在xx中的索引值
-        icl = np.zeros(clust_num, dtype=np.int64)
-        n_clump = 0
-        for ii in tqdm.tqdm(range(clust_num)):
-            i = clust_index[ii]
-            icl[n_clump] = i
-            n_clump += 1
-            clusterInd[i] = n_clump
-        # assignation 将其他非类中心分配到离它最近的类中心中去
         # clusterInd = -1 表示该点不是类的中心点，属于其他点，等待被分配到某个类中去
         # 类的中心点的梯度Gradient被指定为 - 1
-
-        for i in tqdm.tqdm(range(self.ND)):
-            ordrho_i = rho_Ind[i]
+        rho_up_Ind = np.argsort(-1 * self.rho_up)
+        for i in tqdm.tqdm(range(self.kd_ND)):
+            ordrho_i = rho_up_Ind[i]
             if clusterInd[ordrho_i] == -1:  # not centroid
                 clusterInd[ordrho_i] = clusterInd[self.IndNearNeigh[ordrho_i]]
             else:
                 # print(self.Gradient[ordrho_i])
                 self.Gradient[ordrho_i] = -1  # 将类中心点的梯度设置为-1
-        # clusterInd_ = self.boundary_grad(clusterInd)
-        clusterInd_ = clusterInd
-        label_data = clusterInd_[:self.ND].reshape(data.shape)
+        clusterInd_ = self.boundary_grad(clusterInd)
+        label_data = np.zeros(self.ND, np.int32)
+        label_data[rho_Ind[:self.kd_ND]] = clusterInd_[rho_up_Ind[:self.kd_ND]]
+        label_data = label_data.reshape(data.shape)
+        return label_data
 
+    def extro_record(self, label_data):
         print('props')
-        props = measure.regionprops_table(label_image=label_data, intensity_image=data,
+        dim = self.data.n_dim
+        props = measure.regionprops_table(label_image=label_data, intensity_image=self.data,
                                           properties=['weighted_centroid', 'area', 'mean_intensity',
                                                       'weighted_moments_central', 'max_intensity',
                                                       'image_intensity', 'bbox'])
@@ -557,148 +562,6 @@ class LocalDensityCluster:
         clump_Cen = clump_Cen + 1  # python坐标原点是从0开始的，在这里整体加1，改为以1为坐标原点
         id_clumps = np.array([item + 1 for item in range(label_data.max())], np.int32).T
         id_clumps = id_clumps.reshape([id_clumps.shape[0], 1])
-        # n_clump = centInd.shape[0]
-        # clump_sum, clump_volume, clump_peak = np.zeros([n_clump, 1]), np.zeros([n_clump, 1]), np.zeros([n_clump, 1])
-        # clump_Cen, clump_size = np.zeros([n_clump, dim]), np.zeros([n_clump, dim])
-        # clump_Peak = np.zeros([n_clump, dim], np.int64)
-        # clump_ii = 0
-        # if dim == 3:
-        #     for i, item_cent in tqdm.tqdm(enumerate(centInd)):
-        #         rho_cluster_i = np.zeros(self.ND)
-        #         index_cluster_i = np.where(clusterInd == (item_cent[1] + 1))[0]  # centInd[i, 1] --> item[1] 表示第i个类中心的编号
-        #         clump_rho = rho[index_cluster_i]
-        #         rho_max_min = clump_rho.max() - clump_rho.min()
-        #         Gradient_ = self.Gradient.copy()
-        #         grad_clump_i = Gradient_ / rho_max_min
-        #         mask_grad = np.where(grad_clump_i > self.para.gradmin)[0]
-        #         index_cc = np.intersect1d(mask_grad, index_cluster_i)
-        #         rho_cluster_i[index_cluster_i] = rho[index_cluster_i]
-        #         rho_cc_mean = rho[index_cc].mean()
-        #         index_cc_rho = np.where(rho_cluster_i > rho_cc_mean)[0]
-        #         index_cluster_rho = np.union1d(index_cc, index_cc_rho)
-        #
-        #         cl_i_index_xx = self.xx[index_cluster_rho, :] - 1  # -1 是为了在data里面用索引取值(从0开始)
-        #         # clusterInd  标记的点的编号是从1开始，  没有标记的点的编号为-1
-        #         cl_i = np.zeros(data.shape, np.int64)
-        #         for j, item in enumerate(cl_i_index_xx):
-        #             cl_i[item[2], item[1], item[0]] = 1
-        #
-        #         # 形态学处理
-        #         L = ndimage.binary_fill_holes(cl_i).astype(np.int64)
-        #         L = measure.label(L)  # Labeled input image. Labels with value 0 are ignored.
-        #         # STATS = measure.regionprops(L)
-        #
-        #         props = measure.regionprops_table(label_image=L, intensity_image=data,
-        #                                           properties=['weighted_centroid', 'area', 'mean_intensity',
-        #                                                       'weighted_moments_central'])
-        #
-        #         Ar = props['mean_intensity'] * props['area']
-        #         ind = np.where(Ar == Ar.max())[0]
-        #         L[L != (ind[0] + 1)] = 0
-        #         cl_i = L / (ind[0] + 1)
-        #
-        #         clustNum = props['area'][ind[0]]
-        #         weighted_centroid = np.array(
-        #             [props['weighted_centroid-2'], props['weighted_centroid-1'], props['weighted_centroid-0']])
-        #         if clustNum > self.para.v_min:
-        #             # coords = coords[:, [2, 1, 0]]
-        #             # clump_i_ = np.zeros(coords.shape[0])
-        #             # for j, item in enumerate(coords):
-        #             #     clump_i_[j] = data[item[2], item[1], item[0]]
-        #             #
-        #             # clustsum = clump_i_.sum() + 0.0001  # 加一个0.0001 防止分母为0
-        #
-        #             # clump_Cen[clump_ii, :] = np.matmul(clump_i_, coords) / clustsum
-        #             clump_Cen[clump_ii, :] = weighted_centroid[:, ind[0]]
-        #             clump_volume[clump_ii, 0] = clustNum
-        #             clump_sum[clump_ii, 0] = Ar[ind[0]]
-        #
-        #             size_3 = (props['weighted_moments_central-0-0-2'] / props['weighted_moments_central-0-0-0']) ** 0.5
-        #             size_2 = (props['weighted_moments_central-0-2-0'] / props['weighted_moments_central-0-0-0']) ** 0.5
-        #             size_1 = (props['weighted_moments_central-2-0-0'] / props['weighted_moments_central-0-0-0']) ** 0.5
-        #             # x_i = coords - clump_Cen[clump_ii, :]
-        #             # clump_size[clump_ii, :] = 2.3548 * np.sqrt((np.matmul(clump_i_, x_i ** 2) / clustsum)
-        #             #                                            - (np.matmul(clump_i_, x_i) / clustsum) ** 2)
-        #             clump_size[clump_ii, :] = 2.3548 * np.array([size_3[ind[0]], size_2[ind[0]], size_1[ind[0]]])
-        #
-        #             clump_i = data * cl_i
-        #
-        #             mask = mask + cl_i * (clump_ii + 1)
-        #             clump_peak[clump_ii, 0] = clump_i.max()
-        #             clump_Peak[clump_ii, [2, 1, 0]] = np.argwhere(clump_i == clump_i.max())[0]
-        #             clump_ii += 1
-        #         else:
-        #             pass
-        # else:
-        #     for i, item_cent in enumerate(centInd):  # centInd[i, 1] --> item[1] 表示第i个类中心的编号
-        #         rho_cluster_i = np.zeros(self.ND)
-        #         index_cluster_i = np.where(clusterInd == (item_cent[1] + 1))[0]  # centInd[i, 1] --> item[1] 表示第i个类中心的编号
-        #         clump_rho = self.rho[index_cluster_i]
-        #         rho_max_min = clump_rho.max() - clump_rho.min()
-        #         Gradient_ = self.Gradient.copy()
-        #         grad_clump_i = Gradient_ / rho_max_min
-        #         mask_grad = np.where(grad_clump_i > self.para.gradmin)[0]
-        #         index_cc = np.intersect1d(mask_grad, index_cluster_i)
-        #         rho_cluster_i[index_cluster_i] = rho[index_cluster_i]
-        #         rho_cc_mean = rho[index_cc].mean()
-        #         index_cc_rho = np.where(rho_cluster_i > rho_cc_mean)[0]
-        #         index_cluster_rho = np.union1d(index_cc, index_cc_rho)
-        #
-        #         cl_i_index_xx = self.xx[index_cluster_rho, :] - 1  # -1 是为了在data里面用索引取值(从0开始)
-        #         # clusterInd  标记的点的编号是从1开始，  没有标记的点的编号为-1
-        #         # clustNum = cl_i_index_xx.shape[0]
-        #
-        #         cl_i = np.zeros(data.shape, np.int64)
-        #         index_cc_rho = np.where(rho_cluster_i > rho_cc_mean)[0]
-        #         index_clust_rho = np.union1d(index_cc, index_cc_rho)
-        #
-        #         cl_i_index_xx = self.xx[index_clust_rho, :] - 1  # -1 是为了在data里面用索引取值(从0开始)
-        #         # clustInd  标记的点的编号是从1开始，  没有标记的点的编号为-1
-        #         for j, item in enumerate(cl_i_index_xx):
-        #             cl_i[item[1], item[0]] = 1
-        #         # 形态学处理
-        #         L = ndimage.binary_fill_holes(cl_i).astype(np.int64)
-        #         L = measure.label(L)  # Labeled input image. Labels with value 0 are ignored.
-        #         STATS = measure.regionprops(L)
-        #
-        #         Ar_sum = []
-        #         for region in STATS:
-        #             coords = region.coords  # 经过验证，坐标原点为0
-        #             coords = coords[:, [1, 0]]
-        #             temp = 0
-        #             for j, item in enumerate(coords):
-        #                 temp += data[item[1], item[0]]
-        #             Ar_sum.append(temp)
-        #         Ar = np.array(Ar_sum)
-        #         ind = np.where(Ar == Ar.max())[0]
-        #         L[L != ind[0] + 1] = 0
-        #         cl_i = L / (ind[0] + 1)
-        #         coords = STATS[ind[0]].coords  # 最大的连通域对应的坐标
-        #
-        #         clustNum = coords.shape[0]
-        #
-        #         if clustNum > self.para.v_min:
-        #             coords = coords[:, [1, 0]]
-        #             clump_i_ = np.zeros(coords.shape[0])
-        #             for j, item in enumerate(coords):
-        #                 clump_i_[j] = data[item[1], item[0]]
-        #
-        #             clustsum = sum(clump_i_) + 0.0001  # 加一个0.0001 防止分母为0
-        #             clump_Cen[clump_ii, :] = np.matmul(clump_i_, coords) / clustsum
-        #             clump_volume[clump_ii, 0] = clustNum
-        #             clump_sum[clump_ii, 0] = clustsum
-        #
-        #             x_i = coords - clump_Cen[clump_ii, :]
-        #             clump_size[clump_ii, :] = 2.3548 * np.sqrt((np.matmul(clump_i_, x_i ** 2) / clustsum)
-        #                                                        - (np.matmul(clump_i_, x_i) / clustsum) ** 2)
-        #             clump_i = data * cl_i
-        #             # out = out + clump_i
-        #             mask = mask + cl_i * (clump_ii + 1)
-        #             clump_peak[clump_ii, 0] = clump_i.max()
-        #             clump_Peak[clump_ii, [1, 0]] = np.argwhere(clump_i == clump_i.max())[0]
-        #             clump_ii += 1
-        #         else:
-        #             pass
         LDC_outcat = np.column_stack(
             (id_clumps, clump_Peak123.T, clump_Cen.T, clump_Size.T, clump_Peak.T, clump_Sum.T, clump_Volume.T))
         if dim == 3:
@@ -715,7 +578,7 @@ class LocalDensityCluster:
 
         loc_LDC_outcat = self.get_outcat_local(LDC_outcat)
         self.result.detect_num[2] = loc_LDC_outcat.shape[0]
-        return loc_LDC_outcat, LDC_outcat, label_data
+        return loc_LDC_outcat, LDC_outcat
 
     def change_pix2world(self, outcat):
         """
@@ -865,7 +728,8 @@ class LocalDensityCluster:
         return loc_outcat
 
     def get_para_inf(self):
-        table_title = ['rho_min[3*rms]', 'delta_min[4]', 'v_min[27]', 'gradmin[0.01]', 'noise[2*rms]', 'dc']
+        table_title = ['rho_min[%.1f*rms]' % self.para.rms_time, 'delta_min[4]', 'v_min[27]', 'gradmin[0.01]',
+                       'noise[2*rms]', 'dc']
 
         para = [self.para.rho_min, self.para.delta_min, self.para.v_min, self.para.gradmin, self.para.noise,
                 self.para.dc]
