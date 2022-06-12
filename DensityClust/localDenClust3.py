@@ -515,10 +515,10 @@ class LocalDensityCluster:
             icl[n_clump] = i
             n_clump += 1
             clusterInd[i] = n_clump
-        # assignation 将其他非类中心分配到离它最近的类中心中去
+
         # clusterInd = -1 表示该点不是类的中心点，属于其他点，等待被分配到某个类中去
         # 类的中心点的梯度Gradient被指定为 - 1
-
+        # assignation 将其他非类中心分配到离它最近的类中心中去, 从密度最大的点开始
         for i in tqdm.tqdm(range(self.ND)):
             ordrho_i = rho_Ind[i]
             if clusterInd[ordrho_i] == -1:  # not centroid
@@ -526,8 +526,7 @@ class LocalDensityCluster:
             else:
                 # print(self.Gradient[ordrho_i])
                 self.Gradient[ordrho_i] = -1  # 将类中心点的梯度设置为-1
-        # clusterInd_ = self.boundary_grad(clusterInd)
-        clusterInd_ = clusterInd
+        clusterInd_ = self.boundary_grad(clusterInd)
         label_data = clusterInd_[:self.ND].reshape(data.shape)
 
         print('props')
