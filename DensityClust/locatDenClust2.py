@@ -1,5 +1,6 @@
 import os
 import astropy.io.fits as fits
+import tqdm
 from astropy import wcs
 from astropy.coordinates import SkyCoord
 from skimage import filters
@@ -8,6 +9,7 @@ from skimage import measure
 from scipy import ndimage
 import pandas as pd
 import time
+from scipy.spatial import KDTree as kdt
 # from astropy.stats import SigmaClip
 # from photutils.background import StdBackgroundRMS  # 取消掉计算rms的步骤
 import matplotlib.pyplot as plt
@@ -68,16 +70,18 @@ class Data:
             self.rms = data_header['RMS']
             print('the rms of cell is %.4f\n' % data_header['RMS'])
         else:
-            data_rms_path = self.data_path.replace('L.fits', 'L_rms.fits')
+            data_rms_path = self.data_path.replace('.fits', '_rms.fits')
             if os.path.exists(data_rms_path):
                 data_rms = fits.getdata(data_rms_path)
                 data_rms[np.isnan(data_rms)] = 0  # 去掉NaN
                 self.rms = np.median(data_rms)
-                print('The data header not have rms, and the rms is used the median of the file:%s.\n' % data_rms_path)
+                print(
+                    'The data header not have rms, and the rms is used the median of the file:%s.\n the rms of cell is %.4f\n' % (
+                    data_rms_path, self.rms))
             else:
                 print('the data header not have rms, and the rms of data is set 0.23.\n')
                 self.rms = 0.23
-                
+
     def get_wcs(self):
         """
         得到wcs信息
@@ -162,7 +166,8 @@ class Param:
         self.noise = paras_set['noise']
 
     def summary(self):
-        table_title = ['rho_min[3*rms]', 'delta_min[4]', 'v_min[27]', 'gradmin[0.01]', 'noise[2*rms]', 'dc']
+        table_title = ['rho_min[%.1f*rms]' % self.rms_times, 'delta_min[4]', 'v_min[27]', 'gradmin[0.01]',
+                       'noise[%.1f*rms]' % self.noise_times, 'dc']
         para = np.array([[self.rho_min, self.delta_min, self.v_min, self.gradmin, self.noise, self.dc]])
         para_pd = pd.DataFrame(para, columns=table_title)
         print('=' * 30)
@@ -447,13 +452,12 @@ class LocalDensityCluster:
 
     def esti_rho(self):
         esti_file = self.data.data_path.replace('.fits', '_esti.fits')
-        if os.path.isfile(esti_file):
+        if os.path.exists(esti_file):
             print('find the rho file.')
             data_esmit_rr = fits.getdata(esti_file)
         else:
             data = self.data.data_cube
             n_dim = self.data.n_dim
-            # dc_ = np.arange(0.3, 0.9, 0.05)
             dc_ = np.arange(0.3, 0.9, 0.01)
             dc_len = dc_.shape[0]
             data_esmit = np.zeros((data.shape + dc_.shape), np.float32)
@@ -498,7 +502,7 @@ class LocalDensityCluster:
         my_print('First step: calculating rho, delta and Gradient.' + '-' * 20, vosbe_=self.vosbe)
         # print('First step: calculating rho, delta and Gradient.' + '-' * 20)
 
-        for ii in range(1, self.ND):
+        for ii in tqdm.tqdm(range(1, self.ND)):
             # 密度降序排序后，即密度第ii大的索引(在rho中)
             ordrho_ii = rho_Ind[ii]
             rho_ii = rho_sorted[ii]  # 第ii大的密度值
@@ -613,7 +617,7 @@ class LocalDensityCluster:
         clump_Peak = np.zeros([n_clump, dim], np.int64)
         clump_ii = 0
         if dim == 3:
-            for i, item_cent in enumerate(centInd):
+            for i, item_cent in tqdm.tqdm(enumerate(centInd)):
                 rho_cluster_i = np.zeros(self.ND)
                 index_cluster_i = np.where(clusterInd == (item_cent[1] + 1))[0]  # centInd[i, 1] --> item[1] 表示第i个类中心的编号
                 clump_rho = rho[index_cluster_i]
@@ -857,10 +861,12 @@ class LocalDensityCluster:
             [size_x, size_y, size_v] = self.data.data_cube.shape
             indx = []
 
+            # condition 1: 峰值到达边界-->接触边界
             for item_peak, item_size in zip(['Peak1', 'Peak2', 'Peak3'], [size_v, size_y, size_x]):
                 indx.append(np.where(outcat[item_peak] == item_size)[0])
                 indx.append(np.where(outcat[item_peak] == 1)[0])
 
+            # condition 2: 中心位置加减2倍sigma超出数据块边界-->接触边界
             for item_cen, item_size in zip([['Cen1', 'Size1'], ['Cen2', 'Size2'], ['Cen3', 'Size3']],
                                            [size_v, size_y, size_x]):
                 indx.append(np.where((outcat[item_cen[0]] + 2 / 2.3548 * outcat[item_cen[1]]) > item_size)[0])
