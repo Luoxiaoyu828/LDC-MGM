@@ -75,9 +75,8 @@ class Data:
                 data_rms = fits.getdata(data_rms_path)
                 data_rms[np.isnan(data_rms)] = 0  # 去掉NaN
                 self.rms = np.median(data_rms)
-                print(
-                    'The data header not have rms, and the rms is used the median of the file:%s.\n the rms of cell is %.4f\n' % (
-                    data_rms_path, self.rms))
+                print('The data header not have rms, and the rms is used the median of the file:%s.' % data_rms_path)
+                print('The rms of cell is %.4f\n' % self.rms)
             else:
                 print('the data header not have rms, and the rms of data is set 0.23.\n')
                 self.rms = 0.23
@@ -617,7 +616,7 @@ class LocalDensityCluster:
         clump_Peak = np.zeros([n_clump, dim], np.int64)
         clump_ii = 0
         if dim == 3:
-            for i, item_cent in tqdm.tqdm(enumerate(centInd)):
+            for item_cent in tqdm.tqdm(centInd):
                 rho_cluster_i = np.zeros(self.ND)
                 index_cluster_i = np.where(clusterInd == (item_cent[1] + 1))[0]  # centInd[i, 1] --> item[1] 表示第i个类中心的编号
                 clump_rho = rho[index_cluster_i]
