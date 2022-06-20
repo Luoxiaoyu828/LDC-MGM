@@ -62,24 +62,32 @@ class Data:
         # data = self.data_cube
         # bkgrms_value = bkgrms.calc_background_rms(data)
         # self.rms_ = bkgrms_value
-
-        data_header = self.data_header
-        keys = data_header.keys()
-        key = [k for k in keys]
-        if 'RMS' in key:
-            self.rms = data_header['RMS']
-            print('the rms of cell is %.4f\n' % data_header['RMS'])
-        else:
-            data_rms_path = self.data_path.replace('.fits', '_rms.fits')
-            if os.path.exists(data_rms_path):
-                data_rms = fits.getdata(data_rms_path)
-                data_rms[np.isnan(data_rms)] = 0  # 去掉NaN
-                self.rms = np.median(data_rms)
-                print('The data header not have rms, and the rms is used the median of the file:%s.' % data_rms_path)
-                print('The rms of cell is %.4f\n' % self.rms)
+        if self.exist_file:
+            data_header = self.data_header
+            keys = data_header.keys()
+            key = [k for k in keys]
+            if 'RMS' in key:
+                self.rms = data_header['RMS']
+                print('the rms of cell is %.4f\n' % data_header['RMS'])
             else:
-                print('the data header not have rms, and the rms of data is set 0.23.\n')
-                self.rms = 0.23
+                data_rms_path = self.data_path.replace('.fits', '_rms.fits')
+                if os.path.exists(data_rms_path):
+                    data_rms = fits.getdata(data_rms_path)
+                    data_rms[np.isnan(data_rms)] = 0  # 去掉NaN
+                    self.rms = np.median(data_rms)
+                    print('The data header not have rms, and the rms is the median of the file:%s.' % data_rms_path)
+                    print('The rms of cell is %.4f\n' % self.rms)
+                else:
+                    print('the data header not have rms, and the rms of data is set 0.23.\n')
+                    self.rms = 0.23
+
+    def set_wcs(self, wcs):
+        self.wcs = wcs
+
+    def set_data_cube(self, data_cube):
+        self.data_cube = data_cube
+        self.shape = self.data_cube.shape
+        self.n_dim = self.data_cube.ndim
 
     def get_wcs(self):
         """

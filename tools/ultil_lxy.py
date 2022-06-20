@@ -5,8 +5,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import shutil
 from astropy.coordinates import SkyCoord
-from DensityClust.locatDenClust2 import DetectResult, Data
-from DensityClust.locatDenClust2 import LocalDensityCluster as LDC
+from DensityClust.localDenClust2 import DetectResult, Data
+from DensityClust.localDenClust2 import LocalDensityCluster as LDC
 
 
 def make_plot_wcs_1(outcat_wcs, data_wcs, data_cube):
