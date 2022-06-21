@@ -25,12 +25,12 @@ def ldc_base(data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_na
     print(ldc.data.data_path + ' has finished!')
 
 
-def ldc_base_split(ii, data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_name, loc_outcat_wcs_name, mask_name, fig_name):
+def ldc_base_split(data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_name, loc_outcat_wcs_name, mask_name, fig_name):
     ldc = LocalDensityCluster(data=data, para=para)
     ldc.detect()
     ldc.save_detect_log(detect_log)
-    outcat_split = [[0, 120, 0, 120], [30, 120, 0, 120], [30, 150, 0, 120],
-                    [30, 150, 0, 120], [30, 150, 0, 120], [30, 150, 0, 120]]
+    # outcat_split = [[0, 120, 0, 120], [30, 120, 0, 120], [30, 150, 0, 120],
+    #                 [30, 150, 0, 120], [30, 150, 0, 120], [30, 150, 0, 120]]
     # outcat = ldc.result.outcat
     # outcat_i = pd.read_csv(r'test_data/synthetic/synthetic_model_0000_00/LDC_auto_outcat.csv', sep='\t')
 
@@ -121,7 +121,7 @@ def localDenCluster_split_mode(data_name, para, save_folder_all=None, paras_set=
         if paras_set is not None:
             para.set_para(paras_set)
 
-        ldc_base_split(ii, data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_name, loc_outcat_wcs_name,
+        ldc_base_split(data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_name, loc_outcat_wcs_name,
                        mask_name, fig_name)
 
         # 处理局部块的核表
