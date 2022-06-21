@@ -296,7 +296,7 @@ def make_plot_wcs_1(outcat_wcs, data_wcs, data_cube):
 
     cbar = fig.colorbar(im0, cax=axes1)
     cbar.set_label('K m s${}^{-1}$')
-    plt.imshow()
+    plt.show()
 
 
 if __name__ == '__main__':
