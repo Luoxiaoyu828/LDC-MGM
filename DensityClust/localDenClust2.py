@@ -78,8 +78,9 @@ class Data:
                     print('The data header not have rms, and the rms is the median of the file:%s.' % data_rms_path)
                     print('The rms of cell is %.4f\n' % self.rms)
                 else:
+                    self.rms = 0.23256
                     print('the data header not have rms, and the rms of data is set 0.23.\n')
-                    self.rms = 0.23
+
 
     def set_wcs(self, wcs):
         self.wcs = wcs

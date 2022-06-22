@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from DensityClust.locatDenClust2 import Data
+from other.locatDenClust2 import Data
 from DensityClust import LocalDensityClustering_main as LDC
 from fit_clump_function import multi_gauss_fitting, multi_gauss_fitting_new
 from tools.ultil_lxy import get_datacube_by_points
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     data_name = r'0170+010_L/error_data_for_fitting/data/gaussian_out_000.fits' # 待检测的云核
     save_folder = r'0170+010_L/error_data_for_fitting/data/gaussian_out_000'  # 检测结果保存的位置
 
-    LDC.LDC_fast(data_name, save_folder)
+    LDC.LDC_main(data_name, save_folder)
 
     outcat_name_loc = r'0170+010_L/error_data_for_fitting/data/gaussian_out_000/LDC_auto_outcat.csv' # LDC核表
     origin_name = data_name

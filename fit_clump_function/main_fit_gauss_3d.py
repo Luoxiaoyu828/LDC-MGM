@@ -8,7 +8,7 @@ from fit_clump_function import multi_gauss_fitting_new, touch_clump
 from tools.ultil_lxy import create_folder, get_points_by_clumps_id, move_csv_png, restruct_fitting_outcat,\
     get_save_clumps_xyv
 from tools.show_clumps import display_clumps_fitting
-from DensityClust.locatDenClust2 import Data
+from other.locatDenClust2 import Data
 
 
 def fitting_LDC_clumps(points_path, outcat_name, data_rms, ldc_mgm_path=None, fitting_outcat_path=None):

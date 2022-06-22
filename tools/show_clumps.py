@@ -163,7 +163,7 @@ def deal_data(path_detect, path_save_fig, loc=False):
         path_outcat_wcs = os.path.join(path_detect, 'LDC_auto_loc_outcat_wcs.csv')
     else:
         path_outcat = os.path.join(path_detect, 'LDC_auto_outcat.csv')
-        path_outcat_wcs = os.path.join(path_detect, 'LDC_auto_outcat_wcs.csv')
+        path_outcat_wcs = os.path.join(path_detect, 'LDC_auto_outcat.csv')
 
     path_mask = os.path.join(path_detect, 'LDC_auto_mask.fits')
     detect_log = os.path.join(path_detect, 'LDC_auto_detect_log.txt')

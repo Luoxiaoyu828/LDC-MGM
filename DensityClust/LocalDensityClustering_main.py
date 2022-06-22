@@ -2,11 +2,11 @@ import os
 import astropy.io.fits as fits
 import shutil
 import pandas as pd
-from DensityClust.locatDenClust2 import LocalDensityCluster as LDC
+from DensityClust.localDenClust2 import LocalDensityCluster as LDC
 from tools.show_clumps import deal_data
 import split_cube
 # from DensityClust.locatDenClust3 import Data, Param, LocalDensityCluster
-from DensityClust.locatDenClust2 import Data, Param, LocalDensityCluster
+from DensityClust.localDenClust2 import Data, Param, LocalDensityCluster
 
 
 def ldc_base(data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_name, loc_outcat_wcs_name, mask_name, fig_name):
@@ -172,9 +172,9 @@ def LDC_main(data_name, para, save_folder=None, split=False):
 
 
 if __name__ == '__main__':
-    data_name = r'D:\LDC\test_data\synthetic\synthetic_model_0000_00.fits'
+    data_name = r'D:\LDC\test_data\R2_R16_region\0145-005_L.fits'
     para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=2, rms_times=3)
-    save_folder = r'D:\LDC\test_data\synthetic\synthetic_model_0000_00_locat'
-    LDC_main(data_name, para, save_folder, split=False)
+    save_folder = r'D:\LDC\test_data\R2_R16_region\0145-005_L'
+    LDC_main(data_name, para, save_folder, split=True)
 
     # deal_data(save_folder, os.path.join(save_folder, 'ei'))
