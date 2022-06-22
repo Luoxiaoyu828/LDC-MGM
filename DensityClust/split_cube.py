@@ -22,8 +22,8 @@ def split_cube_lxy(data_path, save_folder_all):
     for i, item in enumerate(split_list):
         sub_cude = data_cube[:, item[0]: item[1], item[2]: item[3]]
         # 更换文件路径
-        data_path.replace(os.path.dirname(data_path), save_folder_all)
-        sub_cube_path = data_path.replace('.fits', '_%02d.fits' % i)
+        sub_cube_path = os.path.join(save_folder_all, os.path.basename(data_path))
+        sub_cube_path = sub_cube_path.replace('.fits', '_%02d.fits' % i)
         if not os.path.exists(sub_cube_path):
             sub_cude.write(sub_cube_path)
         sub_cube_path_list.append(sub_cube_path)
@@ -161,12 +161,12 @@ def change_pix2world(outcat, data_wcs):
 
 
 if __name__ == '__main__':
-    data_path = r'test_data/synthetic/synthetic_model_0000.fits'
+    data_path = r'../test_data/synthetic/synthetic_model_0000.fits'
     # sub_cube_path_list = split_cube_lxy(data_path, split_list=split_list)
 
-    data = Data(r'test_data/synthetic/synthetic_model_0000.fits')
+    data = Data(r'../test_data/synthetic/synthetic_model_0000.fits')
 
-    outcat_wcs = pd.read_csv(r'test_data/no_split_outcat/LDC_auto_outcat_pinjiie_wcs.csv')
+    outcat_wcs = pd.read_csv(r'../test_data/no_split_outcat/LDC_auto_outcat_pinjiie_wcs.csv')
     ldc = LDC(data=data, para=None)
     data_wcs = ldc.data.wcs
     data_cube = ldc.data.data_cube
@@ -174,5 +174,5 @@ if __name__ == '__main__':
 
     outcat = change_pix2world(outcat_wcs, data_wcs)
     outcat.to_csv(r'test_data/no_split_outcat/LDC_auto_outcat_pinjie.csv', sep='\t')
-    outcat_bai = pd.read_csv(r'test_data/no_split_outcat/LDC_auto_outcat.csv', sep='\t')
+    outcat_bai = pd.read_csv(r'../test_data/no_split_outcat/LDC_auto_outcat.csv', sep='\t')
 

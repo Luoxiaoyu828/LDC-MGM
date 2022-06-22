@@ -8,7 +8,7 @@
 **/__pycache__
 DensityClust/__pycache__/*.pyc
 *.pyc
-yyy.py
+other/yyy.py
 *.fits
 *.csv
 *.png

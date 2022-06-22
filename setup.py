@@ -6,7 +6,7 @@ def readme_file():
             return wb.read()
 
 setup(name='DensityClust',
-      version='1.2.3.s',
+      version='1.2.4',
       author='Luo Xiaoyu',
       description='Molecular Clump extraction algorithm based on Local Density Clustering*',
       author_email='vastlxy@163.com',
@@ -14,5 +14,4 @@ setup(name='DensityClust',
       url="https://github.com/Luoxiaoyu828/LDC_MGM",
       project_urls={
         "Bug Tracker": "https://github.com/Luoxiaoyu828/LDC_MGM/issues",
-    }
-      )
+    })
