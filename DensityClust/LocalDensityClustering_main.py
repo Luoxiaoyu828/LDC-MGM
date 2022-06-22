@@ -2,11 +2,11 @@ import os
 import astropy.io.fits as fits
 import shutil
 import pandas as pd
-from DensityClust.localDenClust2 import LocalDensityCluster as LDC
+from DensityClust.locatDenClust2 import LocalDensityCluster as LDC
 from tools.show_clumps import deal_data
 import split_cube
 # from DensityClust.locatDenClust3 import Data, Param, LocalDensityCluster
-from DensityClust.localDenClust2 import Data, Param, LocalDensityCluster
+from DensityClust.locatDenClust2 import Data, Param, LocalDensityCluster
 
 
 def ldc_base(data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_name, loc_outcat_wcs_name, mask_name, fig_name):
@@ -97,10 +97,11 @@ def localDenCluster_split_mode(data_name, para, save_folder_all=None, paras_set=
     # data = Data(data_name)
     if save_folder_all is None:
         save_folder_all = data_name.replace('.fits', '')
-        os.makedirs(save_folder_all, exist_ok=True)
+    os.makedirs(save_folder_all, exist_ok=True)
 
-    sub_cube_path_list = split_cube.split_cube_lxy(data_name)
+    sub_cube_path_list = split_cube.split_cube_lxy(data_name, save_folder_all)
     outcat_wcs_all = pd.DataFrame([])
+    outcat_all = pd.DataFrame([])
 
     for ii, data_name in enumerate(sub_cube_path_list):
 
@@ -109,7 +110,7 @@ def localDenCluster_split_mode(data_name, para, save_folder_all=None, paras_set=
 
         mask_name = os.path.join(save_folder, 'LDC_auto_mask.fits')
         outcat_name = os.path.join(save_folder, 'LDC_auto_outcat.csv')
-        outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_outcat_wcs.csv')
+        outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_outcat.csv')
         loc_outcat_name = os.path.join(save_folder, 'LDC_auto_loc_outcat.csv')
         loc_outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_loc_outcat_wcs.csv')
         detect_log = os.path.join(save_folder, 'LDC_auto_detect_log.txt')
@@ -131,11 +132,14 @@ def localDenCluster_split_mode(data_name, para, save_folder_all=None, paras_set=
         ldc = LDC(data=data, para=None)
         outcat_wcs = ldc.change_pix2world(loc_outcat_i)
         outcat_wcs_all = pd.concat([outcat_wcs_all, outcat_wcs], axis=0)
+        outcat_all = pd.concat([outcat_all, loc_outcat_i], axis=0)
 
         shutil.copy(detect_log, os.path.join(save_folder_all, 'LDC_auto_detect_log_%02d.txt' % ii))
 
-    outcat_all_name = os.path.join(save_folder_all, 'LDC_auto_outcat.csv' % ii)
-    outcat_wcs_all.to_csv(outcat_all_name, index=False)
+    outcat_wcs_all_name = os.path.join(save_folder_all, 'LDC_auto_outcat.csv')
+    outcat_all_name = os.path.join(save_folder_all, 'LDC_auto_outcat.csv')
+    outcat_wcs_all.to_csv(outcat_wcs_all_name, index=False)
+    outcat_all.to_csv(outcat_all_name, index=False)
 
 
 def LDC_main(data_name, para, save_folder=None, split=False):
@@ -148,11 +152,11 @@ def LDC_main(data_name, para, save_folder=None, split=False):
     if not split:
         if save_folder is None:
             save_folder = data_name.replace('.fits', '')
-        if not os.path.exists(save_folder):
-            os.mkdir(save_folder)
+        os.makedirs(save_folder, exist_ok=True)
+
         mask_name = os.path.join(save_folder, 'LDC_auto_mask.fits')
         outcat_name = os.path.join(save_folder, 'LDC_auto_outcat.csv')
-        outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_outcat_wcs.csv')
+        outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_outcat.csv')
 
         loc_outcat_name = os.path.join(save_folder, 'LDC_auto_loc_outcat.csv')
         loc_outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_loc_outcat_wcs.csv')
@@ -163,14 +167,14 @@ def LDC_main(data_name, para, save_folder=None, split=False):
                         loc_outcat_name=loc_outcat_name, loc_outcat_wcs_name=loc_outcat_wcs_name, detect_log=detect_log,
                         fig_name=fig_name)
     else:
-        localDenCluster_split_mode(data_name, para)
+        localDenCluster_split_mode(data_name, para, save_folder_all=save_folder)
 
 
 
 if __name__ == '__main__':
-    data_name = r'D:\LDC\test_data\synthetic\synthetic_model_0000.fits'
-    para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=3, rms_times=6)
-    save_folder = r'D:\LDC\test_data\synthetic\synthetic_model'
-    LDC_main(data_name, para, save_folder, split=True)
+    data_name = r'D:\LDC\test_data\synthetic\synthetic_model_0000_00.fits'
+    para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=2, rms_times=3)
+    save_folder = r'D:\LDC\test_data\synthetic\synthetic_model_0000_00_locat'
+    LDC_main(data_name, para, save_folder, split=False)
 
     # deal_data(save_folder, os.path.join(save_folder, 'ei'))
