@@ -90,7 +90,8 @@ def localDenCluster_split_mode(data_name, para, save_folder_all):
     # data = Data(data_name)
     sub_cube_path_list = split_cube.split_cube_lxy(data_name, save_folder_all)
     outcat_wcs_all = pd.DataFrame([])
-    outcat_all = pd.DataFrame([])
+    outcat_wcs_all_name = os.path.join(save_folder_all, 'LDC_auto_outcat_wcs.csv')
+    outcat_all_name = os.path.join(save_folder_all, 'LDC_auto_outcat.csv')
 
     for ii, data_name in enumerate(sub_cube_path_list):
 
@@ -118,13 +119,15 @@ def localDenCluster_split_mode(data_name, para, save_folder_all):
         ldc = LDC(data=data, para=None)
         outcat_wcs = ldc.change_pix2world(loc_outcat_i)
         outcat_wcs_all = pd.concat([outcat_wcs_all, outcat_wcs], axis=0)
-        outcat_all = pd.concat([outcat_all, loc_outcat_i], axis=0)
 
         shutil.copy(detect_log, os.path.join(save_folder_all, 'LDC_auto_detect_log_%02d.txt' % ii))
 
     # 保存整合的核表
-    outcat_wcs_all_name = os.path.join(save_folder_all, 'LDC_auto_outcat_wcs.csv')
-    outcat_all_name = os.path.join(save_folder_all, 'LDC_auto_outcat.csv')
+    data = Data(data_name)
+    ldc = LDC(data=data, para=None)
+    data_wcs = ldc.data.wcs
+    outcat_all = split_cube.change_world2pix(outcat_wcs_all, data_wcs)
+
     outcat_wcs_all.to_csv(outcat_wcs_all_name, sep='\t', index=False)
     outcat_all.to_csv(outcat_all_name, sep='\t', index=False)
 
@@ -160,5 +163,5 @@ def LDC_main(data_name, para, save_folder=None, split=False):
 if __name__ == '__main__':
     data_name = r'D:\LDC\test_data\R2_R16_region\0145-005_L.fits'
     para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=2, rms_times=3)
-    save_folder = r'D:\LDC\test_data\R2_R16_region\0145-005_L12'
+    save_folder = r'D:\LDC\test_data\R2_R16_region\0145-005_L13_noise_2_rho_3'
     LDC_main(data_name, para, save_folder, split=True)
