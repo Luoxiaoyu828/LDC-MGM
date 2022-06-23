@@ -42,25 +42,38 @@ def get_outcat_i(outcat, i):
     return loc_outcat
 
 
-def get_outcat_wcs_all():
+def get_outcat_wcs_all(save_path, data_all_path):
+    """
+    对分块检测结果的整合
+    :param save_path: LDC分块检测结果保存位置
+    :param data_all_path: 原始待检测数据位置
+    :return:
+    """
+
     outcat_wcs_all = pd.DataFrame([])
     outcat_all = pd.DataFrame([])
     for i in range(6):
         # i = 1
         # outcat_i_path = r'test_data/synthetic/synthetic_model_0000_%02d/LDC_auto_outcat.csv' % i
-        outcat_i_path = r'test_data/synthetic_model_0000_bai/LDC_auto_outcat%d.csv' % (i+1)
+        outcat_i_path = os.path.join(save_path, r'0145-005_L_%02d\LDC_auto_outcat.csv' % i)
         outcat_i = pd.read_csv(outcat_i_path, sep='\t')
         loc_outcat_i = get_outcat_i(outcat_i, i)
 
-        origin_data_name = r'test_data/synthetic/synthetic_model_0000_%02d.fits' % i
+        origin_data_name = os.path.join(save_path, r'0145-005_L_%02d.fits' % i)
         data = Data(origin_data_name)
         ldc = LDC(data=data, para=None)
         outcat_wcs = ldc.change_pix2world(loc_outcat_i)
         outcat_wcs_all = pd.concat([outcat_wcs_all, outcat_wcs], axis=0)
         outcat_all = pd.concat([outcat_all, loc_outcat_i], axis=0)
-        # data_wcs = ldc.data.wcs
-        # data_cube = ldc.data.data_cube
-        # make_plot_wcs_1(outcat_wcs, data_wcs, data_cube)
+    data = Data(data_all_path)
+    ldc = LDC(data=data, para=None)
+    data_wcs = ldc.data.wcs
+    data_cube = ldc.data.data_cube
+    make_plot_wcs_1(outcat_wcs_all, data_wcs, data_cube)
+    # fig = plt.gcf()
+    # fig_name = os.path.join(save_path, 'LDC_auto_detect_result1.png')
+    # fig.savefig(fig_name, bbox_inches='tight')
+    # plt.close(fig=fig)
 
 
 def make_data_outcat_wcs(data_name, outcat_wcs_all_path):
@@ -89,18 +102,24 @@ def make_plot_ij(match_outcat, col_names=['Cen1', 'Cen2', 'Cen3']):
     plt.show()
 
 
-def compare_version():
-    sop = r'test_data/no_split_outcat/LDC_auto_outcat.csv'
-    dop = r'test_data/no_split_outcat/LDC_auto_outcat_pinjie.csv'
-    sy_op = r'test_data/synthetic/synthetic_outcat_0000.csv'
-    msp = r'test_data/no_split_outcat/match_sy'
-    match_simu_detect(simulated_outcat_path=sy_op, detected_outcat_path=dop, match_save_path=msp)
+def compare_version(sop, dop, msp):
+    """
+    sop: 整体检测核表路径
+    dop：分块检测核表路径
+    msp：匹配结果保存路径
+    """
+    # sop = r'test_data/no_split_outcat/LDC_auto_outcat.csv'
+    # dop = r'test_data/no_split_outcat/LDC_auto_outcat_pinjie.csv'
+    # sy_op = r'test_data/synthetic/synthetic_outcat_0000.csv'
+    # msp = r'test_data/no_split_outcat/match_sy'
+    match_simu_detect(simulated_outcat_path=sop, detected_outcat_path=dop, match_save_path=msp)
 
-    mop = r'test_data/no_split_outcat/match/Match_table/Match_outcat.txt'
+    mop = msp + '/Match_table/Match_outcat.txt'
     match_outcat = pd.read_csv(mop, sep='\t')
     make_plot_ij(match_outcat, col_names=['Size1', 'Size2', 'Size3'])
     make_plot_ij(match_outcat, col_names=['Peak', 'Sum', 'Volume'])
     make_plot_ij(match_outcat, col_names=['Cen1', 'Cen2', 'Cen3'])
+
 
 def change_pix2world(outcat, data_wcs):
     """
@@ -161,18 +180,7 @@ def change_pix2world(outcat, data_wcs):
 
 
 if __name__ == '__main__':
-    data_path = r'../test_data/synthetic/synthetic_model_0000.fits'
-    # sub_cube_path_list = split_cube_lxy(data_path, split_list=split_list)
-
-    data = Data(r'../test_data/synthetic/synthetic_model_0000.fits')
-
-    outcat_wcs = pd.read_csv(r'../test_data/no_split_outcat/LDC_auto_outcat_pinjiie_wcs.csv')
-    ldc = LDC(data=data, para=None)
-    data_wcs = ldc.data.wcs
-    data_cube = ldc.data.data_cube
-    make_plot_wcs_1(outcat_wcs, data_wcs, data_cube)
-
-    outcat = change_pix2world(outcat_wcs, data_wcs)
-    outcat.to_csv(r'test_data/no_split_outcat/LDC_auto_outcat_pinjie.csv', sep='\t')
-    outcat_bai = pd.read_csv(r'../test_data/no_split_outcat/LDC_auto_outcat.csv', sep='\t')
+    data_path = r'D:\Users\Administrator\Desktop\zhanr\MyProject_2\0145-005_L_4_6_True\0145-005_L.fits'
+    save_path = r'D:\Users\Administrator\Desktop\zhanr\MyProject_2\0145-005_L_4_6_True'
+    get_outcat_wcs_all(save_path, data_path)
 
