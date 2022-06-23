@@ -3,7 +3,6 @@ import shutil
 import pandas as pd
 from DensityClust.localDenClust2 import LocalDensityCluster as LDC
 from DensityClust import split_cube
-# from DensityClust.locatDenClust3 import Data, Param, LocalDensityCluster
 from DensityClust.localDenClust2 import Data, Param, LocalDensityCluster
 
 
@@ -100,7 +99,7 @@ def localDenCluster_split_mode(data_name, para, save_folder_all):
 
         mask_name = os.path.join(save_folder, 'LDC_auto_mask.fits')
         outcat_name = os.path.join(save_folder, 'LDC_auto_outcat.csv')
-        outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_outcat.csv')
+        outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_outcat_wcs.csv')
         loc_outcat_name = os.path.join(save_folder, 'LDC_auto_loc_outcat.csv')
         loc_outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_loc_outcat_wcs.csv')
         detect_log = os.path.join(save_folder, 'LDC_auto_detect_log.txt')
@@ -126,8 +125,8 @@ def localDenCluster_split_mode(data_name, para, save_folder_all):
     # 保存整合的核表
     outcat_wcs_all_name = os.path.join(save_folder_all, 'LDC_auto_outcat_wcs.csv')
     outcat_all_name = os.path.join(save_folder_all, 'LDC_auto_outcat.csv')
-    outcat_wcs_all.to_csv(outcat_wcs_all_name, index=False)
-    outcat_all.to_csv(outcat_all_name, index=False)
+    outcat_wcs_all.to_csv(outcat_wcs_all_name, sep='\t', index=False)
+    outcat_all.to_csv(outcat_all_name, sep='\t', index=False)
 
 
 def LDC_main(data_name, para, save_folder=None, split=False):
@@ -146,7 +145,7 @@ def LDC_main(data_name, para, save_folder=None, split=False):
     else:
         mask_name = os.path.join(save_folder, 'LDC_auto_mask.fits')
         outcat_name = os.path.join(save_folder, 'LDC_auto_outcat.csv')
-        outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_outcat.csv')
+        outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_outcat_wcs.csv')
 
         loc_outcat_name = os.path.join(save_folder, 'LDC_auto_loc_outcat.csv')
         loc_outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_loc_outcat_wcs.csv')
@@ -160,6 +159,6 @@ def LDC_main(data_name, para, save_folder=None, split=False):
 
 if __name__ == '__main__':
     data_name = r'D:\LDC\test_data\R2_R16_region\0145-005_L.fits'
-    para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=6, rms_times=9)
-    save_folder = r'D:\LDC\test_data\R2_R16_region\0145-005_L11'
+    para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=2, rms_times=3)
+    save_folder = r'D:\LDC\test_data\R2_R16_region\0145-005_L12'
     LDC_main(data_name, para, save_folder, split=True)
