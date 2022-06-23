@@ -121,7 +121,7 @@ def compare_version(sop, dop, msp):
     make_plot_ij(match_outcat, col_names=['Cen1', 'Cen2', 'Cen3'])
 
 
-def change_pix2world(outcat, data_wcs):
+def change_world2pix(outcat, data_wcs):
     """
     将算法检测的结果(像素单位)转换到天空坐标系上去
     :return:
