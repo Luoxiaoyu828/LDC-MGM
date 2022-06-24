@@ -1,4 +1,5 @@
 import os
+from astropy.coordinates import SkyCoord
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -42,6 +43,54 @@ def get_outcat_i(outcat, i):
     return loc_outcat
 
 
+def make_plot_wcs_1(outcat_wcs, data_wcs, data_cube, fig_name=''):
+    """
+    在积分图上绘制检测结果
+    当没有检测到云核时，只画积分图
+    """
+    markersize = 2
+    plt.rcParams['xtick.direction'] = 'in'
+    plt.rcParams['ytick.direction'] = 'in'
+    plt.rcParams['xtick.top'] = 'True'
+    plt.rcParams['ytick.right'] = 'True'
+    plt.rcParams['xtick.color'] = 'red'
+    plt.rcParams['ytick.color'] = 'red'
+    # data_name = r'R2_data\data_9\0180-005\0180-005_L.fits'
+    # fits_path = data_name.replace('.fits', '')
+    # title = fits_path.split('\\')[-1]
+    # fig_name = os.path.join(fits_path, title + '.png')
+
+    fig = plt.figure(figsize=(10, 8.5), dpi=100)
+
+    axes0 = fig.add_axes([0.15, 0.1, 0.7, 0.82], projection=data_wcs.celestial)
+    axes0.set_xticks([])
+    axes0.set_yticks([])
+    if data_cube.ndim == 3:
+        im0 = axes0.imshow(data_cube.sum(axis=0))
+    else:
+        im0 = axes0.imshow(data_cube)
+    if outcat_wcs.values.shape[0] > 0:
+        outcat_wcs_c = SkyCoord(frame="galactic", l=outcat_wcs['Cen1'].values, b=outcat_wcs['Cen2'].values,
+                                unit="deg")
+        axes0.plot_coord(outcat_wcs_c, 'r*', markersize=markersize)
+
+    axes0.set_xlabel("Galactic Longitude", fontsize=12)
+    axes0.set_ylabel("Galactic Latitude", fontsize=12)
+    # axes0.set_title(title, fontsize=12)
+    pos = axes0.get_position()
+    pad = 0.01
+    width = 0.02
+    axes1 = fig.add_axes([pos.xmax + pad, pos.ymin, width, 1 * (pos.ymax - pos.ymin)])
+
+    cbar = fig.colorbar(im0, cax=axes1)
+    cbar.set_label('K m s${}^{-1}$')
+    if fig_name == '':
+        plt.show()
+    else:
+        plt.savefig(fig_name, bbox_inches='tight')
+        plt.close(fig=fig)
+
+
 def get_outcat_wcs_all(save_path, data_all_path):
     """
     对分块检测结果的整合
@@ -51,29 +100,33 @@ def get_outcat_wcs_all(save_path, data_all_path):
     """
 
     outcat_wcs_all = pd.DataFrame([])
-    outcat_all = pd.DataFrame([])
+    outcat_wcs_path = os.path.join(save_path, 'LDC_auto_outcat_wcs.csv')
+    outcat_path = os.path.join(save_path, 'LDC_auto_outcat.csv')
+
+    file_name = os.path.basename(data_all_path).replace('.fits', '')
     for i in range(6):
         # i = 1
         # outcat_i_path = r'test_data/synthetic/synthetic_model_0000_%02d/LDC_auto_outcat.csv' % i
-        outcat_i_path = os.path.join(save_path, r'0145-005_L_%02d\LDC_auto_outcat.csv' % i)
+        outcat_i_path = os.path.join(save_path, file_name + r'_%02d\LDC_auto_outcat.csv' % i)
         outcat_i = pd.read_csv(outcat_i_path, sep='\t')
         loc_outcat_i = get_outcat_i(outcat_i, i)
 
-        origin_data_name = os.path.join(save_path, r'0145-005_L_%02d.fits' % i)
+        origin_data_name = os.path.join(save_path, file_name + r'_%02d.fits' % i)
         data = Data(origin_data_name)
         ldc = LDC(data=data, para=None)
         outcat_wcs = ldc.change_pix2world(loc_outcat_i)
         outcat_wcs_all = pd.concat([outcat_wcs_all, outcat_wcs], axis=0)
-        outcat_all = pd.concat([outcat_all, loc_outcat_i], axis=0)
-    data = Data(data_all_path)
+
+    outcat_wcs_all.to_csv(outcat_wcs_path, sep='\t', index=False)
+    data = Data(data_path)
     ldc = LDC(data=data, para=None)
     data_wcs = ldc.data.wcs
-    data_cube = ldc.data.data_cube
-    make_plot_wcs_1(outcat_wcs_all, data_wcs, data_cube)
-    # fig = plt.gcf()
-    # fig_name = os.path.join(save_path, 'LDC_auto_detect_result1.png')
-    # fig.savefig(fig_name, bbox_inches='tight')
-    # plt.close(fig=fig)
+    outcat_wcs_all = pd.read_csv(outcat_wcs_path, sep='\t')
+
+    outcat_all = change_world2pix(outcat_wcs_all, data_wcs)
+    outcat_all.to_csv(outcat_path, sep='\t', index=False)
+    fig_name = os.path.join(save_path, 'LDC_auto_detect_result.png')
+    make_plot_wcs_1(outcat_wcs_all, data_wcs, data.data_cube, fig_name=fig_name)
 
 
 def make_data_outcat_wcs(data_name, outcat_wcs_all_path):
@@ -180,7 +233,8 @@ def change_world2pix(outcat, data_wcs):
 
 
 if __name__ == '__main__':
-    data_path = r'D:\Users\Administrator\Desktop\zhanr\MyProject_2\0145-005_L_4_6_True\0145-005_L.fits'
-    save_path = r'D:\Users\Administrator\Desktop\zhanr\MyProject_2\0145-005_L_4_6_True'
-    get_outcat_wcs_all(save_path, data_path)
+    data_path = r'D:\LDC\test_data\R2_R16_region\0145-005_L.fits'
+    save_path = r'D:\LDC\test_data\R2_R16_region\0145-005_L13_noise_2_rho_3'
+    outcat_all = get_outcat_wcs_all(save_path, data_path)
+    outcat_all.to_csv(os.path.join(save_path, 'LDC_auto_outcat.csv'), index=False)
 
