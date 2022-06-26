@@ -1,9 +1,9 @@
 import os
 import shutil
 import pandas as pd
-from localDenClust2_1 import LocalDensityCluster as LDC
+from localDenClust2 import LocalDensityCluster as LDC
 from DensityClust import split_cube
-from localDenClust2_1 import Data, Param
+from localDenClust2 import Data, Param
 
 
 def ldc_base(data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_name, loc_outcat_wcs_name, mask_name, fig_name):

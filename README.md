@@ -74,3 +74,9 @@ Bug:同一个核被分到两个cell了：
 ![img.png](pic/img.png)
 split_cube.py 增加分块检测结果的拼接程序
 compare_version(sop, dop, msp)函数 用于匹配两个核表及对应的云核形态参数
+
+1.2.5-->1.2.6
+解决了拼接核表不能保存的问题，同时增加了检测核表再原始数据上的可视化结果
+
+1.2.6--1.2.7
+将MGM加入到LDC_MGM_main.py中，和原来的LocalDensityClustering_main.py调用方式保存一致

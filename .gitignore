@@ -4,14 +4,13 @@
 /data/
 /build/
 /test_data/
-
+/pic/
 **/__pycache__
 DensityClust/__pycache__/*.pyc
 *.pyc
 other/yyy.py
 *.fits
 *.csv
-*.png
 
 requirements.txt
 setup.py

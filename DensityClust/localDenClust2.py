@@ -81,15 +81,6 @@ class Data:
                     self.rms = 0.23256
                     print('the data header not have rms, and the rms of data is set 0.23.\n')
 
-
-    def set_wcs(self, wcs):
-        self.wcs = wcs
-
-    def set_data_cube(self, data_cube):
-        self.data_cube = data_cube
-        self.shape = self.data_cube.shape
-        self.n_dim = self.data_cube.ndim
-
     def get_wcs(self):
         """
         得到wcs信息
@@ -117,7 +108,7 @@ class Data:
                 header = Header(self.data_cube.ndim, self.data_cube.shape, self.rms)
                 self.data_header = header.write_header()
                 data_wcs = wcs.WCS(self.data_header)
-                self.wcs = data_wcs  
+                self.wcs = data_wcs
 
     def summary(self):
         print('=' * 30)
@@ -146,7 +137,7 @@ class Param:
         para.dc: Standard deviation of Gaussian filtering
     """
 
-    def __init__(self, delta_min=4, gradmin=0.01, v_min=27, noise_times=2, rms_times=3):
+    def __init__(self, delta_min=4, gradmin=0.01, v_min=27, noise_times=2, rms_times=3, dc=None):
         self.noise = None
         self.rho_min = None
         self.v_min = v_min
@@ -398,6 +389,7 @@ class LocalDensityCluster:
         : ym: size_y
         : zm: size_z
         """
+
         n_dim = self.data.n_dim
         if n_dim == 3:
             # xm, ym, zm = self.size_z, self.size_y, self.size_x
@@ -434,7 +426,7 @@ class LocalDensityCluster:
             :param r: 2 * r + 1
             :return:
             返回point_ii_xy点r邻域的点坐标
-            
+
             """
             ym, xm = self.data.shape
             it = point_ii_xy[0]
@@ -457,6 +449,39 @@ class LocalDensityCluster:
             ordrho_jj.reshape([1, ordrho_jj.shape[0]])
 
         return ordrho_jj[:, 0], Index_value
+
+    def kc_coord_new(self, ordrho_ii, r):
+        """
+        :param point_ii_xy: 当前点坐标(x,y,z)
+        :param r: 2 * r + 1
+        :return:
+        返回delta_ii_xy点r邻域的点坐标
+
+        : xm: size_x
+        : ym: size_y
+        : zm: size_z
+        """
+        point_ii_xy = self.kd_tree.data[ordrho_ii]
+        n_dim = self.data.n_dim
+        idex1 = self.kd_tree.query_ball_point(point_ii_xy, r=r*np.sqrt(n_dim) + 0.0001, workers=4)
+        idex1.remove(ordrho_ii)  # 删除本身
+        idex1 = np.array(idex1, np.int32)
+        bt1 = self.kd_tree.data[idex1]
+
+        bb = np.abs(bt1 - point_ii_xy).max(1)
+        d_idx= np.where(bb <= r)[0]
+
+        bt1 = bt1[d_idx, :]
+        idex1 = idex1[d_idx]
+        if n_dim == 3:
+            aa = np.lexsort((bt1[:, 2], bt1[:, 1], bt1[:, 0]))
+            # 按照x>y>z的优先级排序
+        elif n_dim == 2:
+            aa = np.lexsort((bt1[:, 1], bt1[:, 0]))
+            # 按照x>y>z的优先级排序
+        bt1 = bt1[aa, :]
+        idex1 = idex1[aa]
+        return point_ii_xy, idex1, bt1
 
     def esti_rho(self):
         esti_file = self.data.data_path.replace('.fits', '_esti.fits')
@@ -483,6 +508,14 @@ class LocalDensityCluster:
 
         return data_esmit_rr
 
+    def build_kd_tree(self):
+        aa = self.xx[self.rho > self.para.noise]
+        self.ND_num = aa.shape[0]
+        # kd_tree = kdt(aa)
+        # rho_up = self.rho[self.rho > self.para.noise]
+        # self.idx_rho = np.where(self.rho > self.para.noise)[0]
+        self.kd_tree = kdt(self.xx)
+
     def detect(self):
         t0_ = time.time()
         delta_min = self.para.delta_min
@@ -490,15 +523,17 @@ class LocalDensityCluster:
         k1 = 1  # 第1次计算点的邻域大小
         k2 = np.ceil(delta_min).astype(np.int32)  # 第2次计算点的邻域大小
         self.xx = get_xyz(data)  # xx: 3D data coordinates  坐标原点是 1
+
         # 密度估计
         if self.para.dc is None:
             data_estim = self.esti_rho()
         else:
             data_estim = filters.gaussian(data, self.para.dc)
 
-        rho = data_estim.flatten()
-        rho_Ind = np.argsort(-rho)
-        rho_sorted = rho[rho_Ind]
+        self.rho = data_estim.flatten()
+        self.build_kd_tree()
+        rho_Ind = np.argsort(-self.rho)
+        rho_sorted = self.rho[rho_Ind[: self.ND_num]]
         # delta 记录距离，
         # IndNearNeigh 记录：两个密度点的联系 % index of nearest neighbor with higher density
         self.delta = np.zeros(self.ND, np.float32)  # np.iinfo(np.int32).max-->2147483647-->1290**3
@@ -510,21 +545,34 @@ class LocalDensityCluster:
         my_print('First step: calculating rho, delta and Gradient.' + '-' * 20, vosbe_=self.vosbe)
         # print('First step: calculating rho, delta and Gradient.' + '-' * 20)
 
-        for ii in tqdm.tqdm(range(1, self.ND)):
+        for ii in tqdm.tqdm(range(1, self.ND_num)):
             # 密度降序排序后，即密度第ii大的索引(在rho中)
             ordrho_ii = rho_Ind[ii]
             rho_ii = rho_sorted[ii]  # 第ii大的密度值
-            if rho_ii >= self.para.noise:
-                delta_ordrho_ii = self.maxed
-                Gradient_ordrho_ii = 0
-                IndNearNeigh_ordrho_ii = 0
-                point_ii_xy = self.xx[ordrho_ii, :]
 
-                get_value = True  # 判断是否需要在大循环中继续执行，默认需要，一旦在小循环中赋值成功，就不在大循环中运行
-                idex, bt = self.kc_coord(point_ii_xy, k1)
-                for ordrho_jj, item in zip(idex, bt):
-                    rho_jj = rho[ordrho_jj]  # 根据索引在rho里面取值
-                    dist_i_j = np.sqrt(((point_ii_xy - item) ** 2).sum())  # 计算两点间的距离
+            delta_ordrho_ii = self.maxed
+            Gradient_ordrho_ii = 0
+            IndNearNeigh_ordrho_ii = 0
+            get_value = True  # 判断是否需要在大循环中继续执行，默认需要，一旦在小循环中赋值成功，就不在大循环中运行
+
+            point_ii_xy, idex1, bt1 = self.kc_coord_new(ordrho_ii, k1)
+            dist_ii_jj = np.sqrt(((point_ii_xy - bt1) ** 2).sum(1))  # 计算两点间的距离
+            for ordrho_jj, dist_i_j in zip(idex1, dist_ii_jj):
+                rho_jj = self.rho[ordrho_jj]  # 根据索引在rho里面取值
+                gradient = (rho_jj - rho_ii) / dist_i_j
+                if dist_i_j <= delta_ordrho_ii and gradient >= 0:
+                    delta_ordrho_ii = dist_i_j
+                    Gradient_ordrho_ii = gradient
+                    IndNearNeigh_ordrho_ii = ordrho_jj
+                    get_value = False
+
+            if get_value:
+                # 表明，在(2 * k1 + 1) * (2 * k1 + 1) * (2 * k1 + 1)的邻域中没有找到比该点高，距离最近的点，则在更大的邻域中搜索
+                # idex, bt = self.kc_coord(point_ii_xy, k2)
+                point_ii_xy, idex1, bt1 = self.kc_coord_new(ordrho_ii, k2)
+                dist_ii_jj = np.sqrt(((point_ii_xy - bt1) ** 2).sum(1))  # 计算两点间的距离
+                for ordrho_jj, dist_i_j in zip(idex1, dist_ii_jj):
+                    rho_jj = self.rho[ordrho_jj]  # 根据索引在rho里面取值
                     gradient = (rho_jj - rho_ii) / dist_i_j
                     if dist_i_j <= delta_ordrho_ii and gradient >= 0:
                         delta_ordrho_ii = dist_i_j
@@ -532,29 +580,15 @@ class LocalDensityCluster:
                         IndNearNeigh_ordrho_ii = ordrho_jj
                         get_value = False
 
-                if get_value:
-                    # 表明，在(2 * k1 + 1) * (2 * k1 + 1) * (2 * k1 + 1)的邻域中没有找到比该点高，距离最近的点，则在更大的邻域中搜索
-                    idex, bt = self.kc_coord(point_ii_xy, k2)
-                    for ordrho_jj, item in zip(idex, bt):
-                        rho_jj = rho[ordrho_jj]  # 根据索引在rho里面取值
-                        dist_i_j = np.sqrt(((point_ii_xy - item) ** 2).sum())  # 计算两点间的距离
-                        gradient = (rho_jj - rho_ii) / dist_i_j
-                        if dist_i_j <= delta_ordrho_ii and gradient >= 0:
-                            delta_ordrho_ii = dist_i_j
-                            Gradient_ordrho_ii = gradient
-                            IndNearNeigh_ordrho_ii = ordrho_jj
-                            get_value = False
+            if get_value:
+                delta_ordrho_ii = k2 + 0.0001
+                Gradient_ordrho_ii = -1
+                IndNearNeigh_ordrho_ii = self.ND
 
-                if get_value:
-                    delta_ordrho_ii = k2 + 0.0001
-                    Gradient_ordrho_ii = -1
-                    IndNearNeigh_ordrho_ii = self.ND
+            self.delta[ordrho_ii] = delta_ordrho_ii
+            self.Gradient[ordrho_ii] = Gradient_ordrho_ii
+            self.IndNearNeigh[ordrho_ii] = IndNearNeigh_ordrho_ii
 
-                self.delta[ordrho_ii] = delta_ordrho_ii
-                self.Gradient[ordrho_ii] = Gradient_ordrho_ii
-                self.IndNearNeigh[ordrho_ii] = IndNearNeigh_ordrho_ii
-            else:
-                pass
 
         delta_sorted = np.sort(-1 * self.delta) * -1
         self.delta[rho_Ind[0]] = delta_sorted[1]
@@ -563,20 +597,23 @@ class LocalDensityCluster:
         # print(' ' * 10 + 'delata, rho and Gradient are calculated, using %.2f seconds.' % (t1_ - t0_))
         self.result.calculate_time[0] = t1_ - t0_
         t0_ = time.time()
-        loc_LDC_outcat, LDC_outcat, mask = self.extra_outcat(rho_Ind, rho)
+        loc_LDC_outcat, LDC_outcat, mask = self.extra_outcat(rho_Ind)
         t1_ = time.time()
         self.result.calculate_time[1] = t1_ - t0_
         my_print(' ' * 10 + 'Outcats are calculated, using %.2f seconds.' % (t1_ - t0_), self.vosbe)
         # print(' ' * 10 + 'Outcats are calculated, using %.2f seconds.' % (t1_ - t0_))
         self.result.outcat = LDC_outcat
-        self.result.loc_outcat = loc_LDC_outcat
         self.result.outcat_wcs = self.change_pix2world(self.result.outcat)
+
+        self.result.loc_outcat = loc_LDC_outcat
         self.result.loc_outcat_wcs = self.change_pix2world(self.result.loc_outcat)
+
         self.result.mask = mask
         self.result.data = self.data
         self.result.para = self.para
 
-    def extra_outcat(self, rho_Ind, rho):
+    def extra_outcat(self, rho_Ind):
+        rho = self.rho
         deltamin = self.para.delta_min
         data = self.data.data_cube
         dim = self.data.n_dim
@@ -590,13 +627,11 @@ class LocalDensityCluster:
 
         clust_num = len(clust_index)
         # icl是用来记录第i个类中心在xx中的索引值
-        icl = np.zeros(clust_num, dtype=np.int64)
+        icl = clust_index
         n_clump = 0
-        for ii in range(clust_num):
-            i = clust_index[ii]
-            icl[n_clump] = i
+        for ii in clust_index:
             n_clump += 1
-            clusterInd[i] = n_clump
+            clusterInd[ii] = n_clump
         # assignation 将其他非类中心分配到离它最近的类中心中去
         # clusterInd = -1 表示该点不是类的中心点，属于其他点，等待被分配到某个类中去
         # 类的中心点的梯度Gradient被指定为 - 1
@@ -626,7 +661,7 @@ class LocalDensityCluster:
         clump_ii = 0
         if dim == 3:
             for item_cent in tqdm.tqdm(centInd):
-                rho_cluster_i = np.zeros(self.ND)
+                rho_cluster_i = np.zeros(self.ND, np.float32)
                 index_cluster_i = np.where(clusterInd == (item_cent[1] + 1))[0]  # centInd[i, 1] --> item[1] 表示第i个类中心的编号
                 clump_rho = rho[index_cluster_i]
                 rho_max_min = clump_rho.max() - clump_rho.min()
@@ -639,14 +674,17 @@ class LocalDensityCluster:
                 index_cc_rho = np.where(rho_cluster_i > rho_cc_mean)[0]
                 index_cluster_rho = np.union1d(index_cc, index_cc_rho)
 
-                cl_i_index_xx = self.xx[index_cluster_rho, :] - 1  # -1 是为了在data里面用索引取值(从0开始)
+                # cl_i_index_xx = self.xx[index_cluster_rho, :] - 1  # -1 是为了在data里面用索引取值(从0开始)
                 # clusterInd  标记的点的编号是从1开始，  没有标记的点的编号为-1
-                cl_i = np.zeros(data.shape, np.int64)
-                for j, item in enumerate(cl_i_index_xx):
-                    cl_i[item[2], item[1], item[0]] = 1
+                cl_i_index = np.zeros_like(self.rho, np.int32)
+                cl_i_index[index_cluster_rho] = 1
+                cl_i = cl_i_index.reshape(self.data.shape)
+                # cl_i = np.zeros(data.shape, np.int64)
+                # for j, item in enumerate(cl_i_index_xx):
+                #     cl_i[item[2], item[1], item[0]] = 1
 
                 # 形态学处理
-                L = ndimage.binary_fill_holes(cl_i).astype(np.int64)
+                L = ndimage.binary_fill_holes(cl_i).astype(np.int32)
                 L = measure.label(L)  # Labeled input image. Labels with value 0 are ignored.
                 # STATS = measure.regionprops(L)
 
@@ -660,16 +698,10 @@ class LocalDensityCluster:
                 cl_i = L / (ind[0] + 1)
 
                 clustNum = props['area'][ind[0]]
-                weighted_centroid = np.array([props['weighted_centroid-2'], props['weighted_centroid-1'], props['weighted_centroid-0']])
+                weighted_centroid = np.array(
+                    [props['weighted_centroid-2'], props['weighted_centroid-1'], props['weighted_centroid-0']])
                 if clustNum > self.para.v_min:
-                    # coords = coords[:, [2, 1, 0]]
-                    # clump_i_ = np.zeros(coords.shape[0])
-                    # for j, item in enumerate(coords):
-                    #     clump_i_[j] = data[item[2], item[1], item[0]]
-                    #
-                    # clustsum = clump_i_.sum() + 0.0001  # 加一个0.0001 防止分母为0
 
-                    # clump_Cen[clump_ii, :] = np.matmul(clump_i_, coords) / clustsum
                     clump_Cen[clump_ii, :] = weighted_centroid[:, ind[0]]
                     clump_volume[clump_ii, 0] = clustNum
                     clump_sum[clump_ii, 0] = Ar[ind[0]]
@@ -826,11 +858,11 @@ class LocalDensityCluster:
             elif 'Cen3' in table_title:
                 # 3d result
                 peak1, peak2, peak3 = data_wcs.all_pix2world(outcat['Peak1'], outcat['Peak2'], outcat['Peak3'], 1)
+                clump_Peak = np.column_stack([peak1, peak2, peak3 / 1000])
                 cen1, cen2, cen3 = data_wcs.all_pix2world(outcat['Cen1'], outcat['Cen2'], outcat['Cen3'], 1)
                 size1, size2, size3 = np.array([outcat['Size1'] * 30, outcat['Size2'] * 30, outcat['Size3'] * 0.166])
-                clustPeak, clustSum, clustVolume = np.array([outcat['Peak'], outcat['Sum'], outcat['Volume']])
 
-                clump_Peak = np.column_stack([peak1, peak2, peak3 / 1000])
+                clustPeak, clustSum, clustVolume = np.array([outcat['Peak'], outcat['Sum'], outcat['Volume']])
                 clump_Cen = np.column_stack([cen1, cen2, cen3 / 1000])
                 clustSize = np.column_stack([size1, size2, size3])
                 id_clumps = []  # MWISP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
@@ -974,7 +1006,8 @@ class LocalDensityCluster:
 
         detect_inf.append('The number of clumps: %d\n' % second_num)
         detect_inf.append('The number of local region clumps: %d\n' % loc_num)
-        detect_inf.append('delata, rho and Gradient are calculated, using %.2f seconds.\n' % self.result.calculate_time[0])
+        detect_inf.append(
+            'delata, rho and Gradient are calculated, using %.2f seconds.\n' % self.result.calculate_time[0])
         detect_inf.append('Outcats are calculated, using %.2f seconds.\n' % self.result.calculate_time[1])
         return detect_inf
 
@@ -987,7 +1020,7 @@ class LocalDensityCluster:
 
         f.writelines('Data information\n')
         [f.writelines(item) for item in data_inf]
-        f.writelines('='*20 + '\n\n')
+        f.writelines('=' * 20 + '\n\n')
 
         f.writelines('Algorithm parameter information\n')
         [f.writelines(item) for item in para_inf]
