@@ -70,8 +70,12 @@ def make_plot_wcs_1(outcat_wcs, data_wcs, data_cube, fig_name=''):
     else:
         im0 = axes0.imshow(data_cube)
     if outcat_wcs.values.shape[0] > 0:
-        outcat_wcs_c = SkyCoord(frame="galactic", l=outcat_wcs['Cen1'].values, b=outcat_wcs['Cen2'].values,
-                                unit="deg")
+        if 'Cen1' in outcat_wcs.keys():
+            outcat_wcs_c = SkyCoord(frame="galactic", l=outcat_wcs['Cen1'].values, b=outcat_wcs['Cen2'].values,
+                                    unit="deg")
+        else:
+            outcat_wcs_c = SkyCoord(frame="galactic", l=outcat_wcs['Galactic_Longitude'].values,
+                                    b=outcat_wcs['Galactic_Latitude'].values, unit="deg")
         axes0.plot_coord(outcat_wcs_c, 'r*', markersize=markersize)
 
     axes0.set_xlabel("Galactic Longitude", fontsize=12)
@@ -228,6 +232,68 @@ def change_world2pix(outcat, data_wcs):
 
         outcat = np.column_stack(
             (id_clumps, clump_Peak, clump_Cen, clustSize, clustPeak, clustSum, clustVolume))
+        outcat = pd.DataFrame(outcat, columns=table_title)
+        return outcat
+
+
+def change_world2pix_fit(outcat, data_wcs):
+    """
+    将算法检测的结果(像素单位)转换到天空坐标系上去
+    :return:
+    outcat_wcs
+    ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Velocity',
+       'Size_major', 'Size_minor', 'Size_velocity', 'Theta', 'Peak', 'Flux',
+       'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']
+    -->3d
+
+     ['ID', 'Peak1', 'Peak2', 'Cen1', 'Cen2',  'Size1', 'Size2', 'Peak', 'Sum', 'Volume']
+     -->2d
+    """
+    # outcat_record = self.result.outcat_record
+    table_title = outcat.keys()
+    Theta = outcat['Theta'].values
+    Flux_SNR_Cost = outcat[['Flux_SNR', 'Peak_SNR', 'Success', 'Cost']]
+    if outcat is None:
+        return None
+    else:
+        if 'Velocity' not in table_title:
+            # 2d result
+            peak1, peak2 = data_wcs.all_world2pix(outcat['Peak1'], outcat['Peak2'], 1)
+            cen1, cen2 = data_wcs.all_pix2world(outcat['Cen1'], outcat['Cen2'], 1)
+            size1, size2 = np.array([outcat['Size1'] * 30, outcat['Size2'] * 30])
+
+            clump_Peak = np.column_stack([peak1, peak2])
+            clump_Cen = np.column_stack([cen1, cen2])
+            clustSize = np.column_stack([size1, size2])
+            clustPeak, clustSum, clustVolume = np.array([outcat['Peak'], outcat['Sum'], outcat['Volume']])
+
+            id_clumps = []  # MWSIP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
+            for item_l, item_b in zip(cen1, cen2):
+                str_l = 'MWSIP' + ('%.03f' % item_l).rjust(7, '0')
+                if item_b < 0:
+                    str_b = '-' + ('%.03f' % abs(item_b)).rjust(6, '0')
+                else:
+                    str_b = '+' + ('%.03f' % abs(item_b)).rjust(6, '0')
+                id_clumps.append(str_l + str_b)
+            id_clumps = np.array(id_clumps)
+
+        elif 'Velocity' in table_title:
+            # 3d result
+            cen1, cen2, cen3 = data_wcs.all_world2pix(outcat['Galactic_Longitude'], outcat['Galactic_Latitude'],
+                                                      outcat['Velocity'] * 1000, 1)
+            size1, size2, size3 = np.array(
+                [outcat['Size_major'] / 30, outcat['Size_minor'] / 30, outcat['Size_velocity'] / 0.166])
+            clustPeak, clustSum = np.array([outcat['Peak'], outcat['Flux']])
+
+            clump_Cen = np.column_stack([cen1, cen2, cen3])
+            clustSize = np.column_stack([size1, size2, size3])
+            id_clumps = outcat['ID']
+        else:
+            print('outcat_record columns name are: ' % table_title)
+            return None
+
+        outcat = np.column_stack(
+            (id_clumps, clump_Cen, clustSize, Theta, clustPeak, clustSum, Flux_SNR_Cost))
         outcat = pd.DataFrame(outcat, columns=table_title)
         return outcat
 

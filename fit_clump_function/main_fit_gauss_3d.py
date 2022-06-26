@@ -86,16 +86,16 @@ def fitting_LDC_clumps(points_path, outcat_name, data_rms, ldc_mgm_path=None, fi
     return fitting_outcat_path
 
 
-def MGM_main(outcat_name_loc, origin_name, mask_name, save_path):
+def MGM_main(outcat_name_pix, origin_name, mask_name, save_path):
     """
-    outcat_name_loc: LDC 检测核表
+    outcat_name_loc: LDC 检测像素核表
     origin_name: 检测的原始数据
     mask_name: LDC检测得到的mask
     save_path: 拟合结果保存位置
     """
     # 初始化对应文件保存路径
-    if not os.path.exists(outcat_name_loc):
-        raise FileExistsError('\n' + outcat_name_loc + ' not exists.')
+    if not os.path.exists(outcat_name_pix):
+        raise FileExistsError('\n' + outcat_name_pix + ' not exists.')
 
     if not os.path.exists(origin_name):
         raise FileExistsError('\n' + origin_name + ' not exists.')
@@ -109,12 +109,12 @@ def MGM_main(outcat_name_loc, origin_name, mask_name, save_path):
     MWISP_outcat_path = os.path.join(save_path, 'MWISP_outcat.csv')
 
     # step 1: 准备拟合数据
-    get_save_clumps_xyv(origin_name, mask_name, outcat_name_loc, points_path)
+    get_save_clumps_xyv(origin_name, mask_name, outcat_name_pix, points_path)
 
     # step 2: 进行拟合并保存拟合像素级核表
     data_int = Data(origin_name)
     data_rms = data_int.rms
-    fitting_outcat_path = fitting_LDC_clumps(points_path, outcat_name_loc, data_rms, ldc_mgm_path)
+    fitting_outcat_path = fitting_LDC_clumps(points_path, outcat_name_pix, data_rms, ldc_mgm_path)
 
     # step 3: 将拟合核表整理成最终核表并保存
     data_int.get_wcs()

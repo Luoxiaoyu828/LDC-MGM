@@ -1,13 +1,13 @@
 import os
 import shutil
 import pandas as pd
-from DensityClust.localDenClust2 import LocalDensityCluster as LDC
+from localDenClust2_1 import LocalDensityCluster as LDC
 from DensityClust import split_cube
-from DensityClust.localDenClust2 import Data, Param, LocalDensityCluster
+from localDenClust2_1 import Data, Param
 
 
 def ldc_base(data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_name, loc_outcat_wcs_name, mask_name, fig_name):
-    ldc = LocalDensityCluster(data=data, para=para)
+    ldc = LDC(data=data, para=para)
     ldc.detect()
     ldc.save_detect_log(detect_log)
 
@@ -23,15 +23,18 @@ def ldc_base(data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_na
 
 
 def ldc_base_split(data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_name, loc_outcat_wcs_name, mask_name, fig_name):
-    ldc = LocalDensityCluster(data=data, para=para)
+    ldc = LDC(data=data, para=para)
     ldc.detect()
     ldc.save_detect_log(detect_log)
 
     ldc.result.save_outcat(outcat_name, loc=0)
     ldc.result.save_outcat_wcs(outcat_wcs_name, loc=0)
 
-    ldc.result.save_outcat(loc_outcat_name, loc=1)
-    ldc.result.save_outcat_wcs(loc_outcat_wcs_name, loc=1)
+    if loc_outcat_name is not None:
+        ldc.result.save_outcat(loc_outcat_name, loc=1)
+
+    if loc_outcat_wcs_name is not None:
+        ldc.result.save_outcat_wcs(loc_outcat_wcs_name, loc=1)
 
     ldc.result.save_mask(mask_name)
     ldc.result.make_plot_wcs_1(fig_name)
@@ -68,7 +71,7 @@ def localDenCluster(data_name, para, mask_name=None, outcat_name=None, outcat_wc
              fig_name)
 
 
-def localDenCluster_split_mode(data_name, para, save_folder_all):
+def localDenCluster_split_mode(data_name, para, save_folder_all, save_loc=False):
     """
     LDC algorithm
     :param data_name: 待检测数据的路径(str)，fits文件
@@ -78,6 +81,7 @@ def localDenCluster_split_mode(data_name, para, save_folder_all):
         para.v_min: Minimum volume [27]
         para.noise: The noise level of the data, used for data truncation calculation [2*rms]
         para.dc: auto
+    save_loc: 是否保存局部核表
     :param mask_name: 掩模数据的保存路径(str) [*.fits]
     :param outcat_name: 基于像素单位的核表保存路径(str) [*.csv]
     :param outcat_wcs_name: 基于wcs的核表保存路径(str) [*.csv]
@@ -92,21 +96,26 @@ def localDenCluster_split_mode(data_name, para, save_folder_all):
     outcat_wcs_all = pd.DataFrame([])
     outcat_wcs_all_name = os.path.join(save_folder_all, 'LDC_auto_outcat_wcs.csv')
     outcat_all_name = os.path.join(save_folder_all, 'LDC_auto_outcat.csv')
+    fig_name = os.path.join(save_folder_all, 'LDC_auto_detect_result.png')
 
-    for ii, data_name in enumerate(sub_cube_path_list):
+    for ii, data_name_ in enumerate(sub_cube_path_list):
 
-        save_folder = data_name.replace('.fits', '')
+        save_folder = data_name_.replace('.fits', '')
         os.makedirs(save_folder, exist_ok=True)
 
+        detect_log = os.path.join(save_folder, 'LDC_auto_detect_log.txt')
+        fig_name = os.path.join(save_folder, 'LDC_auto_detect_result.png')
         mask_name = os.path.join(save_folder, 'LDC_auto_mask.fits')
         outcat_name = os.path.join(save_folder, 'LDC_auto_outcat.csv')
         outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_outcat_wcs.csv')
-        loc_outcat_name = os.path.join(save_folder, 'LDC_auto_loc_outcat.csv')
-        loc_outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_loc_outcat_wcs.csv')
-        detect_log = os.path.join(save_folder, 'LDC_auto_detect_log.txt')
-        fig_name = os.path.join(save_folder, 'LDC_auto_detect_result.png')
+        if save_loc:
+            loc_outcat_name = os.path.join(save_folder, 'LDC_auto_loc_outcat.csv')
+            loc_outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_loc_outcat_wcs.csv')
+        else:
+            loc_outcat_name = None
+            loc_outcat_wcs_name = None
 
-        data = Data(data_name)
+        data = Data(data_name_)
         para.set_rms_by_data(data)
 
         ldc_base_split(data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_name, loc_outcat_wcs_name,
@@ -121,6 +130,7 @@ def localDenCluster_split_mode(data_name, para, save_folder_all):
         outcat_wcs_all = pd.concat([outcat_wcs_all, outcat_wcs], axis=0)
         shutil.copy(detect_log, os.path.join(save_folder_all, 'LDC_auto_detect_log_%02d.txt' % ii))
 
+
     # 保存整合的银经银纬的核表
     outcat_wcs_all.to_csv(outcat_wcs_all_name, sep='\t', index=False)
     # 保存整合的像素的核表及绘制检测云核的位置
@@ -130,7 +140,6 @@ def localDenCluster_split_mode(data_name, para, save_folder_all):
     outcat_wcs_all = pd.read_csv(outcat_wcs_all_name, sep='\t')
     outcat_all = split_cube.change_world2pix(outcat_wcs_all, data_wcs)
     outcat_all.to_csv(outcat_all_name, sep='\t', index=False)
-    fig_name = os.path.join(save_folder_all, 'LDC_auto_detect_result.png')
     split_cube.make_plot_wcs_1(outcat_wcs_all, data_wcs, data.data_cube, fig_name=fig_name)
 
 
@@ -164,6 +173,6 @@ def LDC_main(data_name, para, save_folder=None, split=False):
 
 if __name__ == '__main__':
     data_name = r'D:\LDC\test_data\R2_R16_region\0145-005_L.fits'
-    para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=2, rms_times=3)
-    save_folder = r'D:\LDC\test_data\R2_R16_region\0145-005_L13_noise_2_rho_3'
+    para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=8, rms_times=12)
+    save_folder = r'D:\LDC\test_data\R2_R16_region\0145-005_L13_noise_8_rho_12_126_1'
     LDC_main(data_name, para, save_folder, split=True)
