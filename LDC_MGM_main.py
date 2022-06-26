@@ -1,28 +1,10 @@
 import os
 import shutil
 import pandas as pd
-from DensityClust.localDenClust2_1 import LocalDensityCluster as LDC
+from DensityClust.localDenClust2 import LocalDensityCluster as LDC
 from DensityClust import split_cube
-from DensityClust.localDenClust2_1 import Data, Param
+from DensityClust.localDenClust2 import Data, Param
 from fit_clump_function import main_fit_gauss_3d as mgm
-
-
-def ldc_mgm_base(data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_name, loc_outcat_wcs_name, mask_name, fig_name):
-    ldc = LDC(data=data, para=para)
-    ldc.detect()
-    ldc.save_detect_log(detect_log)
-
-    ldc.result.save_outcat(outcat_name, loc=0)
-    ldc.result.save_outcat_wcs(outcat_wcs_name, loc=0)
-
-    ldc.result.save_outcat(loc_outcat_name, loc=1)
-    ldc.result.save_outcat_wcs(loc_outcat_wcs_name, loc=1)
-
-    ldc.result.save_mask(mask_name)
-    ldc.result.make_plot_wcs_1(fig_name)
-    print(ldc.data.data_path + ' has finished!')
-
-    mgm.MGM_main(outcat_name, origin_name, mask_name, save_path)
 
 
 def ldc_base_split(data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_name, loc_outcat_wcs_name, mask_name, fig_name):
@@ -61,14 +43,26 @@ def localDenCluster(data_name, para, mask_name=None, outcat_name=None, outcat_wc
     :param flags: 代码调用还是软件界面调用，默认为True(代码调用)
     :return:
     """
-    data = Data(data_name)
-    para.set_rms_by_data(data)
 
     if paras_set is not None:
         para.set_para(paras_set)
 
-    ldc_mgm_base(data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_name, loc_outcat_wcs_name, mask_name,
-                 fig_name)
+    data = Data(data_name)
+    para.set_rms_by_data(data)
+
+    ldc = LDC(data=data, para=para)
+    ldc.detect()
+    ldc.save_detect_log(detect_log)
+
+    ldc.result.save_outcat(outcat_name, loc=0)
+    ldc.result.save_outcat_wcs(outcat_wcs_name, loc=0)
+
+    ldc.result.save_outcat(loc_outcat_name, loc=1)
+    ldc.result.save_outcat_wcs(loc_outcat_wcs_name, loc=1)
+
+    ldc.result.save_mask(mask_name)
+    ldc.result.make_plot_wcs_1(fig_name)
+    print(ldc.data.data_path + ' has finished!')
 
 
 def LDC_MGM_split_mode(data_name, para, save_folder_all, save_loc=False):
