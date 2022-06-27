@@ -120,8 +120,7 @@ def localDenCluster_split_mode(data_name, para, save_folder_all, save_loc):
     outcat_wcs_all.to_csv(outcat_wcs_all_name, sep='\t', index=False)   # 保存整合的银经银纬的核表
     # 保存整合的像素的核表及绘制检测云核的位置
     data = Data(data_name)
-    ldc = LDC(data=data, para=None)
-    data_wcs = ldc.data.wcs
+    data_wcs = data.wcs
     outcat_wcs_all = pd.read_csv(outcat_wcs_all_name, sep='\t')
     outcat_all = split_cube.change_world2pix(outcat_wcs_all, data_wcs)
     outcat_all.to_csv(outcat_all_name, sep='\t', index=False)
