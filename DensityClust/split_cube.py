@@ -115,7 +115,7 @@ def make_plot_ij(match_outcat_path, col_names_g=None, col_names_s=None):
         col_name_s = 's_' + c_n_s
         data_g = match_outcat[col_name_g].values
         data_s = match_outcat[col_name_s].values
-        ax = fig.add_subplot(1, 3, ii + 1)
+        ax = fig.add_subplot(1, 3, ii)
         ax.scatter(data_g, data_s)
         ax.set_xlabel(col_name_g)
         ax.set_ylabel(col_name_s)
@@ -143,7 +143,7 @@ def compare_version(sop, dop, msp, s_cen=None, s_szie=None, g_cen=None):
         s_szie = ['Size1', 'Size2', 'Size3']
     if s_cen is None:
         s_cen = ['Cen1', 'Cen2', 'Cen3']
-    match_cfg = match_simu_detect_new(sop, dop, msp, s_cen=s_cen, s_szie=s_szie, g_cen=g_cen)
+    match_cfg = match_simu_detect_new(sop, dop, msp, s_cen=s_cen, s_size=s_szie, g_cen=g_cen)
 
     mop = match_cfg['Match_table_name']
     make_plot_ij(mop, col_names_g=g_cen, col_names_s=s_cen)
