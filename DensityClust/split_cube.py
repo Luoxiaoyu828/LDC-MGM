@@ -1,13 +1,13 @@
 import os
 from astropy.coordinates import SkyCoord
+from tools.show_clumps import make_plot_wcs_1
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from spectral_cube import SpectralCube
-from tools.show_clumps import make_plot_wcs_1
 from DensityClust.localDenClust2 import LocalDensityCluster as LDC
 from DensityClust.localDenClust2 import Data
-from t_match.match_6_ import match_simu_detect
+from t_match.match_6_ import match_simu_detect_new
 
 
 split_list = [[0, 150, 0, 150], [0, 150, 90, 271], [0, 150, 210, 361],
@@ -41,58 +41,6 @@ def get_outcat_i(outcat, i):
     aa = aa.loc[outcat['Cen2'] > cen2_min]
     loc_outcat = aa.loc[outcat['Cen2'] <= cen2_max]
     return loc_outcat
-
-
-def make_plot_wcs_1(outcat_wcs, data_wcs, data_cube, fig_name=''):
-    """
-    在积分图上绘制检测结果
-    当没有检测到云核时，只画积分图
-    """
-    markersize = 2
-    plt.rcParams['xtick.direction'] = 'in'
-    plt.rcParams['ytick.direction'] = 'in'
-    plt.rcParams['xtick.top'] = 'True'
-    plt.rcParams['ytick.right'] = 'True'
-    plt.rcParams['xtick.color'] = 'red'
-    plt.rcParams['ytick.color'] = 'red'
-    # data_name = r'R2_data\data_9\0180-005\0180-005_L.fits'
-    # fits_path = data_name.replace('.fits', '')
-    # title = fits_path.split('\\')[-1]
-    # fig_name = os.path.join(fits_path, title + '.png')
-
-    fig = plt.figure(figsize=(10, 8.5), dpi=100)
-
-    axes0 = fig.add_axes([0.15, 0.1, 0.7, 0.82], projection=data_wcs.celestial)
-    axes0.set_xticks([])
-    axes0.set_yticks([])
-    if data_cube.ndim == 3:
-        im0 = axes0.imshow(data_cube.sum(axis=0))
-    else:
-        im0 = axes0.imshow(data_cube)
-    if outcat_wcs.values.shape[0] > 0:
-        if 'Cen1' in outcat_wcs.keys():
-            outcat_wcs_c = SkyCoord(frame="galactic", l=outcat_wcs['Cen1'].values, b=outcat_wcs['Cen2'].values,
-                                    unit="deg")
-        else:
-            outcat_wcs_c = SkyCoord(frame="galactic", l=outcat_wcs['Galactic_Longitude'].values,
-                                    b=outcat_wcs['Galactic_Latitude'].values, unit="deg")
-        axes0.plot_coord(outcat_wcs_c, 'r*', markersize=markersize)
-
-    axes0.set_xlabel("Galactic Longitude", fontsize=12)
-    axes0.set_ylabel("Galactic Latitude", fontsize=12)
-    # axes0.set_title(title, fontsize=12)
-    pos = axes0.get_position()
-    pad = 0.01
-    width = 0.02
-    axes1 = fig.add_axes([pos.xmax + pad, pos.ymin, width, 1 * (pos.ymax - pos.ymin)])
-
-    cbar = fig.colorbar(im0, cax=axes1)
-    cbar.set_label('K m s${}^{-1}$')
-    if fig_name == '':
-        plt.show()
-    else:
-        plt.savefig(fig_name, bbox_inches='tight')
-        plt.close(fig=fig)
 
 
 def get_outcat_wcs_all(save_path, data_all_path):
@@ -133,49 +81,72 @@ def get_outcat_wcs_all(save_path, data_all_path):
     make_plot_wcs_1(outcat_wcs_all, data_wcs, data.data_cube, fig_name=fig_name)
 
 
-def make_data_outcat_wcs(data_name, outcat_wcs_all_path):
+def make_plot_wcs_data_outcat(data_name, outcat_wcs_path):
+    """
+    将银经银纬核表绘制在数据块上
+    :param data_name：分子云核数据块路径
+    :param outcat_wcs_path：银经银纬核表路径
+    """
     data = Data(data_name)
-    outcat_wcs_all = pd.read_csv(outcat_wcs_all_path, sep='\t')
-    ldc = LDC(data=data, para=None)
-    data_wcs = ldc.data.wcs
-    data_cube = ldc.data.data_cube
+    outcat_wcs_all = pd.read_csv(outcat_wcs_path, sep='\t')
+    data_wcs = data.wcs
+    data_cube = data.data_cube
     make_plot_wcs_1(outcat_wcs_all, data_wcs, data_cube)
 
 
-def make_plot_ij(match_outcat, col_names=['Cen1', 'Cen2', 'Cen3']):
-
-    fig = plt.figure(figsize=[15,4])
-    for ii, cen in enumerate(col_names):
-        plt_xy = []
-        xy_label = []
-        for fs in ['f_', 's_']:
-            col_name = fs + cen
-            xy_label.append(col_name)
-            plt_xy.append(match_outcat[col_name].values)
-        ax = fig.add_subplot(1,3,ii+1)
-        ax.scatter(plt_xy[0], plt_xy[1])
-        ax.set_xlabel(xy_label[0])
-        ax.set_ylabel(xy_label[1])
+def make_plot_ij(match_outcat_path, col_names_g=None, col_names_s=None):
+    """
+    将匹配结果进行绘制
+        :param match_outcat_path：匹配核表
+        :param col_names_g：检测核表要比较的列名，如：['Cen1', 'Cen2', 'Cen3']
+        :param col_names_s：仿真核表要比较的列名，如：['Cen1', 'Cen2', 'Cen3']
+    return:
+        绘制的1*3的图片
+    """
+    match_outcat = pd.read_csv(match_outcat_path, sep='\t')
+    if col_names_s is None:
+        col_names_s = ['Cen1', 'Cen2', 'Cen3']
+    if col_names_g is None:
+        col_names_g = ['Cen1', 'Cen2', 'Cen3']
+    fig = plt.figure(figsize=[15, 4])
+    ii = 1
+    for c_n_g, c_n_s in zip(col_names_g, col_names_s):
+        col_name_g = 'f_' + c_n_g
+        col_name_s = 's_' + c_n_s
+        data_g = match_outcat[col_name_g].values
+        data_s = match_outcat[col_name_s].values
+        ax = fig.add_subplot(1, 3, ii + 1)
+        ax.scatter(data_g, data_s)
+        ax.set_xlabel(col_name_g)
+        ax.set_ylabel(col_name_s)
+        ii += 1
     plt.show()
 
 
-def compare_version(sop, dop, msp):
+def compare_version(sop, dop, msp, s_cen=None, s_szie=None, g_cen=None):
     """
-    sop: 整体检测核表路径
-    dop：分块检测核表路径
-    msp：匹配结果保存路径
+    将仿真核表和检测核表进行匹配，并把匹配结果的中心坐标散点图画出来.
+    其他参数如要绘制，请调用make_plot_ij()函数
+        :param sop：仿真核表路径(也可以是其他作为标准的核表)
+        :param dop：检测核表路径
+        :param msp：匹配核表保存路径
+        :param s_cen：仿真核表的质心列名，默认为：['Cen1', 'Cen2', 'Cen3']
+        :param s_cen：仿真核表的轴长列名，默认为：['Size1', 'Size2', 'Size3']
+        :param g_cen：检测核表的质心列名，默认为：['Cen1', 'Cen2', 'Cen3']
+    return:
+        None
     """
-    # sop = r'test_data/no_split_outcat/LDC_auto_outcat.csv'
-    # dop = r'test_data/no_split_outcat/LDC_auto_outcat_pinjie.csv'
-    # sy_op = r'test_data/synthetic/synthetic_outcat_0000.csv'
-    # msp = r'test_data/no_split_outcat/match_sy'
-    match_simu_detect(simulated_outcat_path=sop, detected_outcat_path=dop, match_save_path=msp)
 
-    mop = msp + '/Match_table/Match_outcat.txt'
-    match_outcat = pd.read_csv(mop, sep='\t')
-    make_plot_ij(match_outcat, col_names=['Size1', 'Size2', 'Size3'])
-    make_plot_ij(match_outcat, col_names=['Peak', 'Sum', 'Volume'])
-    make_plot_ij(match_outcat, col_names=['Cen1', 'Cen2', 'Cen3'])
+    if g_cen is None:
+        g_cen = ['Cen1', 'Cen2', 'Cen3']
+    if s_szie is None:
+        s_szie = ['Size1', 'Size2', 'Size3']
+    if s_cen is None:
+        s_cen = ['Cen1', 'Cen2', 'Cen3']
+    match_cfg = match_simu_detect_new(sop, dop, msp, s_cen=s_cen, s_szie=s_szie, g_cen=g_cen)
+
+    mop = match_cfg['Match_table_name']
+    make_plot_ij(mop, col_names_g=g_cen, col_names_s=s_cen)
 
 
 def change_world2pix(outcat, data_wcs):
