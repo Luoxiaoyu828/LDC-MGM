@@ -185,7 +185,7 @@ def match_simu_detect(simulated_outcat_path, detected_outcat_path, match_save_pa
     return match_cfg
 
 
-def match_simu_detect_new(sop, dop, msp, s_cen=None, s_szie=None, g_cen=None):
+def match_simu_detect_new(sop, dop, msp, s_cen=None, s_size=None, g_cen=None):
     """
     指定两个核表及其对应的列名进行匹配
         :param sop：仿真核表路径(也可以是其他作为标准的核表)
@@ -196,13 +196,13 @@ def match_simu_detect_new(sop, dop, msp, s_cen=None, s_szie=None, g_cen=None):
         :param g_cen：检测核表的质心列名，默认为：['Cen1', 'Cen2', 'Cen3']
     return：
         match_cfg：字典类型
-         match_cfg['Match_table_name'] = Match_table_name
+        match_cfg['Match_table_name'] = Match_table_name
         match_cfg['Miss_table_name'] = Miss_table_name
         match_cfg['False_table_name'] = False_table_name
         方便后续计算时调用。
     """
-    if s_szie is None:
-        s_szie = ['Size1', 'Size2', 'Size3']
+    if s_size is None:
+        s_size = ['Size1', 'Size2', 'Size3']
     if s_cen is None:
         s_cen = ['Cen1', 'Cen2', 'Cen3']
     if g_cen is None:
@@ -235,7 +235,7 @@ def match_simu_detect_new(sop, dop, msp, s_cen=None, s_szie=None, g_cen=None):
     # Cen_simulate = np.vstack([table_s['Cen1'], table_s['Cen2'], table_s['Cen3']]).T
     Cen_simulate = table_s[s_cen].values
     # Size_simulate = np.vstack([table_s['Size1'], table_s['Size2'], table_s['Size3']]).T
-    Size_simulate = table_s[s_szie].values
+    Size_simulate = table_s[s_size].values
     # Cen_gauss = np.vstack([table_g['Cen1'], table_g['Cen2'], table_g['Cen3']]).T
     Cen_gauss = table_g[g_cen].values
     Cen_gauss = Cen_gauss[~np.isnan(Cen_gauss).any(axis=1), :]
