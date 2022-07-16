@@ -20,7 +20,7 @@ The code is completed with Python  3. The following dependencies are needed to r
 
 
 # Install
-I suggest you install the code using pip from an Anaconda Python 3 environment. From that environment:
+I suggest you to install the code using pip from an Anaconda Python 3 environment. From that environment:
 ```
 git clone https://github.com/Luoxiaoyu828/LDC-MGM.git
 cd LDC-MGM/dist
