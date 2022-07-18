@@ -3,13 +3,14 @@
 /0170+010_L/MGM_problem_cell/0155+030_L/
 /data/
 /build/
+/test_data/
+/pic/
 **/__pycache__
 DensityClust/__pycache__/*.pyc
 *.pyc
-
+other/yyy.py
 *.fits
 *.csv
-*.png
 
 requirements.txt
 setup.py
