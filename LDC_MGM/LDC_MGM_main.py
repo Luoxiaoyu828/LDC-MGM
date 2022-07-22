@@ -9,7 +9,7 @@ from DensityClust.LocalDensityClustering_main import localDenCluster
 from fit_clump_function import main_fit_gauss_3d as mgm
 
 
-def LDC_MGM_split_mode(data_name, para, save_folder_all, save_loc):
+def LDC_MGM_split_mode(data_name, para, save_folder_all, save_loc, save_mgm_png):
     """
     LDC algorithm
     :param data_name: 待检测数据的路径(str)，fits文件
@@ -56,9 +56,11 @@ def LDC_MGM_split_mode(data_name, para, save_folder_all, save_loc):
         shutil.copy(detect_log, os.path.join(save_folder_all, 'LDC_auto_detect_log_%02d.txt' % ii))
         outcat_wcs_all = pd.concat([outcat_wcs_all, outcat_wcs], axis=0)
 
+        loc_outcat_i_name = outcat_name.replace('.csv', '_loc.csv')
+        loc_outcat_i.to_csv(loc_outcat_i_name, sep='\t', index=False)
         # 进行MGM
         mask_name = ldc_cfg['mask_name']
-        mgm.MGM_main(outcat_name, sub_data_name, mask_name, sub_save_folder)
+        mgm.MGM_main(loc_outcat_i_name, sub_data_name, mask_name, sub_save_folder, save_mgm_png)
         outcat_fit_wcs_path = os.path.join(sub_save_folder, 'MWISP_outcat.csv')
         outcat_fit_wcs = pd.read_csv(outcat_fit_wcs_path, sep='\t')
 
@@ -88,29 +90,32 @@ def LDC_MGM_split_mode(data_name, para, save_folder_all, save_loc):
     show_clumps.make_plot_wcs_1(outcat_fit_wcs_all, data_wcs, data.data_cube, fig_name=fig_name)
 
 
-def LDC_MGM_main(data_name, para, save_folder=None, split=False, save_loc=False):
+def LDC_MGM_main(data_name, para, save_folder=None, split=False, save_loc=False, save_mgm_png=False):
     """
-    LDC算法入口，对指定的数据进行检测，将结果保存到指定位置
+    LDC_MGM算法入口，对指定的数据进行检测，将结果保存到指定位置
     data_name：数据文件[*.fits]
     para: LDC 算法的参数设置
     save_folder：检测结果保存路径，如果是分块模式，中间结果也会保存
     split: 是否采用分块检测再拼接策略
+    save_mgm_png: 是否保存MGM的中间结果图片，默认为False: 不保存
     """
     if save_folder is None:
         save_folder = data_name.replace('.fits', '')
     os.makedirs(save_folder, exist_ok=True)
 
     if split:
-        LDC_MGM_split_mode(data_name, para, save_folder_all=save_folder, save_loc=save_loc)
+        LDC_MGM_split_mode(data_name, para, save_folder_all=save_folder, save_loc=save_loc, save_mgm_png=save_mgm_png)
     else:
         ldc_cfg = localDenCluster(data_name, para, save_folder, save_loc)
         outcat_name = ldc_cfg['outcat_name']
         mask_name = ldc_cfg['mask_name']
-        mgm.MGM_main(outcat_name, data_name, mask_name, save_folder)
+        mgm.MGM_main(outcat_name, data_name, mask_name, save_folder, save_mgm_png)
 
 
 if __name__ == '__main__':
-    data_name = r'test_data/synthetic/synthetic_model_0000.fits'
-    para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=23, rms_times=26)
-    save_folder = r'D:\LDC\test_data\R2_R16_region\0145-005_L13_noise_23_rho_26_126'
-    LDC_MGM_main(data_name, para, save_folder, split=True, save_loc=False)
+    data_name = r'D:\LDC\test_data\synthetic\synthetic_model_0000_00.fits'
+    para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=5, rms_times=2)
+    para.touch = False
+    save_folder = r'D:\LDC\test_data\R2_R16_region\0145-005_L13_noise_2_rho_5_128_deb1'
+    save_mgm_png = False
+    LDC_MGM_main(data_name, para, save_folder, split=False, save_loc=False, save_mgm_png=save_mgm_png)

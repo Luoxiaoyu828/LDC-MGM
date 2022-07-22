@@ -4,6 +4,8 @@ from astropy import wcs
 from tabulate import tabulate
 import astropy.io.fits as fits
 import pandas as pd
+from scipy.spatial import kdtree as kdt
+import tqdm
 
 
 def setdiff_nd(a1, a2):
@@ -318,6 +320,100 @@ def get_outcat_local(outcat):
 def my_print(str_='', vosbe_=False):
     if vosbe_:
         print(str_)
+
+
+def get_feature(rho, rho_sort_idx, kdt_xx, num, r):
+    INN = np.zeros_like(rho, np.int32)
+    delta = np.zeros_like(rho, np.float32)
+    grad = np.zeros_like(rho, np.float32) - 1
+    i = 0
+    for rho_i_idx in tqdm.tqdm(rho_sort_idx[1: num]):
+        rho_i_idx_up = rho_sort_idx[: i+1]
+        rho_i_point = kdt_xx.data[rho_i_idx]
+        ball_idx = kdt_xx.query_ball_point(rho_i_point, r=r, workers=4)
+        ball_idx.remove(rho_i_idx)
+        inter_sec = np.intersect1d(rho_i_idx_up, np.array(ball_idx))
+        if inter_sec.shape[0] > 0:
+            kdt_i_idx_up = kdt.KDTree(kdt_xx.data[inter_sec])
+            gloab_idx = inter_sec
+        else:
+            kdt_i_idx_up = kdt.KDTree(kdt_xx.data[rho_i_idx_up])
+            gloab_idx = rho_i_idx_up
+        near_dis, near_idx = kdt_i_idx_up.query(rho_i_point, k=1, workers=4)
+        INN[rho_i_idx] = gloab_idx[near_idx]
+        delta[rho_i_idx] = near_dis
+        grad[rho_i_idx] = (rho[gloab_idx[near_idx]] - rho[rho_i_idx]) / near_dis
+        i += 1
+    delta[rho_sort_idx[0]] = delta.max()
+    return INN, delta, grad
+
+
+def get_feature_new(rho, rho_sort_idx, kdt_xx_loc, num, r):
+    INN = np.zeros_like(rho, np.int32)
+    delta = np.zeros_like(rho, np.float32)
+    grad = np.zeros_like(rho, np.float32) - 1
+    i = 0
+    for rho_i_idx in tqdm.tqdm(rho_sort_idx[1: num]):
+        rho_i_idx_up = rho_sort_idx[: i+1]
+        rho_i_point = kdt_xx_loc.data[rho_i_idx]
+        ball_idx = kdt_xx_loc.query_ball_point(rho_i_point, r=r, workers=4)
+        ball_idx.remove(rho_i_idx)
+        inter_sec = np.intersect1d(rho_i_idx_up, np.array(ball_idx))
+        if inter_sec.shape[0] > 0:
+            kdt_i_idx_up = kdt.KDTree(kdt_xx_loc.data[inter_sec])
+            gloab_idx = inter_sec
+        else:
+            kdt_i_idx_up = kdt.KDTree(kdt_xx_loc.data[rho_i_idx_up])
+            gloab_idx = rho_i_idx_up
+        near_dis, near_idx = kdt_i_idx_up.query(rho_i_point, k=1, workers=4)
+        INN[rho_i_idx] = gloab_idx[near_idx]
+        delta[rho_i_idx] = near_dis
+        grad[rho_i_idx] = (rho[gloab_idx[near_idx]] - rho[rho_i_idx]) / near_dis
+        i += 1
+    delta[rho_sort_idx[0]] = delta.max()
+    return INN, delta, grad
+
+
+def assignation(rho, delta, delta_min, rho_min, v_min, rho_sort_idx, INN):
+    clust_index = np.intersect1d(np.where(rho > rho_min), np.where(delta > delta_min))
+    clusterInd = -1 * np.ones_like(rho, np.int32)
+    clusterInd[clust_index] = np.arange(clust_index.shape[0]) + 1
+
+    for i in range(rho.shape[0]):
+        ordrho_i = rho_sort_idx[i]
+        if clusterInd[ordrho_i] == -1:  # not centroid
+            clusterInd[ordrho_i] = clusterInd[INN[ordrho_i]]
+
+    clusterInd_ = np.zeros_like(clusterInd)
+    ii = 0
+    for i in range(1, clusterInd.max() + 1, 1):
+        volume_idx = np.where(clusterInd == i)[0]
+        if volume_idx.shape[0] > v_min:
+            ii += 1
+            clusterInd_[volume_idx] = ii
+    return clusterInd_
+
+
+def en_edge(clusterInd, rho, grad, gradmin, v_min):
+    clump_id = 0
+    clumpInd = np.zeros_like(clusterInd, np.int32)
+    for cluster_i in range(1, clusterInd.max() + 1, 1):
+        index_cluster_i = np.where(clusterInd == cluster_i)[0]
+        clump_rho = rho[index_cluster_i]
+        clump_grad = grad[index_cluster_i]
+        rho_max_min = clump_rho.max() - clump_rho.min()
+
+        clump_grad_i = clump_grad / rho_max_min
+        index_grad = np.where(clump_grad_i > gradmin)[0]
+        rho_cc_mean = clump_rho[index_grad].mean()
+
+        index_cc_rho = np.where(clump_rho > rho_cc_mean)[0]
+        index_cluster = np.union1d(index_cc_rho, index_grad)
+        if index_cluster.shape[0] > v_min:
+            clump_id += 1
+            idx_cluster = index_cluster_i[index_cluster]
+            clumpInd[idx_cluster] = clump_id
+    return clumpInd
 
 
 if __name__ == '__main__':

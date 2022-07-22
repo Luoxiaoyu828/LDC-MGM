@@ -15,6 +15,7 @@ from scipy.spatial import KDTree as kdt
 import matplotlib.pyplot as plt
 from DensityClust.clustring_subfunc import \
     get_xyz, setdiff_nd, my_print
+from DensityClust.clustring_subfunc import get_feature, assignation, en_edge
 from Generate.fits_header import Header
 
 
@@ -461,12 +462,12 @@ class LocalDensityCluster:
         : ym: size_y
         : zm: size_z
         """
-        point_ii_xy = self.kd_tree.data[ordrho_ii]
+        point_ii_xy = self.kdt_xx.data[ordrho_ii]
         n_dim = self.data.n_dim
-        idex1 = self.kd_tree.query_ball_point(point_ii_xy, r=r*np.sqrt(n_dim) + 0.0001, workers=4)
+        idex1 = self.kdt_xx.query_ball_point(point_ii_xy, r=r * np.sqrt(n_dim) + 0.0001, workers=4)
         idex1.remove(ordrho_ii)  # 删除本身
         idex1 = np.array(idex1, np.int32)
-        bt1 = self.kd_tree.data[idex1]
+        bt1 = self.kdt_xx.data[idex1]
 
         bb = np.abs(bt1 - point_ii_xy).max(1)
         d_idx= np.where(bb <= r)[0]
@@ -514,7 +515,7 @@ class LocalDensityCluster:
         # kd_tree = kdt(aa)
         # rho_up = self.rho[self.rho > self.para.noise]
         # self.idx_rho = np.where(self.rho > self.para.noise)[0]
-        self.kd_tree = kdt(self.xx)
+        self.kdt_xx = kdt(self.xx)
 
     def detect(self):
         t0_ = time.time()
@@ -533,71 +534,74 @@ class LocalDensityCluster:
         self.rho = data_estim.flatten()
         self.build_kd_tree()
         rho_Ind = np.argsort(-self.rho)
-        rho_sorted = self.rho[rho_Ind[: self.ND_num]]
+        # rho_sorted = self.rho[rho_Ind[: self.ND_num]]
         # delta 记录距离，
-        # IndNearNeigh 记录：两个密度点的联系 % index of nearest neighbor with higher density
-        self.delta = np.zeros(self.ND, np.float32)  # np.iinfo(np.int32).max-->2147483647-->1290**3
-        self.IndNearNeigh = np.zeros(self.ND, np.int64) + self.ND
-        self.Gradient = np.zeros(self.ND, np.float32)
+        # INN 记录：两个密度点的联系 % index of nearest neighbor with higher density
 
-        self.delta[rho_Ind[0]] = self.maxed
-        self.IndNearNeigh[rho_Ind[0]] = rho_Ind[0]
-        my_print('First step: calculating rho, delta and Gradient.' + '-' * 20, vosbe_=self.vosbe)
-        # print('First step: calculating rho, delta and Gradient.' + '-' * 20)
+        INN, delta, grad = get_feature(self.rho, rho_Ind, self.kdt_xx, self.ND_num, self.para.delta_min)
 
-        for ii in tqdm.tqdm(range(1, self.ND_num)):
-            # 密度降序排序后，即密度第ii大的索引(在rho中)
-            ordrho_ii = rho_Ind[ii]
-            rho_ii = rho_sorted[ii]  # 第ii大的密度值
-
-            delta_ordrho_ii = self.maxed
-            Gradient_ordrho_ii = 0
-            IndNearNeigh_ordrho_ii = 0
-            get_value = True  # 判断是否需要在大循环中继续执行，默认需要，一旦在小循环中赋值成功，就不在大循环中运行
-
-            point_ii_xy, idex1, bt1 = self.kc_coord_new(ordrho_ii, k1)
-            dist_ii_jj = np.sqrt(((point_ii_xy - bt1) ** 2).sum(1))  # 计算两点间的距离
-            for ordrho_jj, dist_i_j in zip(idex1, dist_ii_jj):
-                rho_jj = self.rho[ordrho_jj]  # 根据索引在rho里面取值
-                gradient = (rho_jj - rho_ii) / dist_i_j
-                if dist_i_j <= delta_ordrho_ii and gradient >= 0:
-                    delta_ordrho_ii = dist_i_j
-                    Gradient_ordrho_ii = gradient
-                    IndNearNeigh_ordrho_ii = ordrho_jj
-                    get_value = False
-
-            if get_value:
-                # 表明，在(2 * k1 + 1) * (2 * k1 + 1) * (2 * k1 + 1)的邻域中没有找到比该点高，距离最近的点，则在更大的邻域中搜索
-                # idex, bt = self.kc_coord(point_ii_xy, k2)
-                point_ii_xy, idex1, bt1 = self.kc_coord_new(ordrho_ii, k2)
-                dist_ii_jj = np.sqrt(((point_ii_xy - bt1) ** 2).sum(1))  # 计算两点间的距离
-                for ordrho_jj, dist_i_j in zip(idex1, dist_ii_jj):
-                    rho_jj = self.rho[ordrho_jj]  # 根据索引在rho里面取值
-                    gradient = (rho_jj - rho_ii) / dist_i_j
-                    if dist_i_j <= delta_ordrho_ii and gradient >= 0:
-                        delta_ordrho_ii = dist_i_j
-                        Gradient_ordrho_ii = gradient
-                        IndNearNeigh_ordrho_ii = ordrho_jj
-                        get_value = False
-
-            if get_value:
-                delta_ordrho_ii = k2 + 0.0001
-                Gradient_ordrho_ii = -1
-                IndNearNeigh_ordrho_ii = self.ND
-
-            self.delta[ordrho_ii] = delta_ordrho_ii
-            self.Gradient[ordrho_ii] = Gradient_ordrho_ii
-            self.IndNearNeigh[ordrho_ii] = IndNearNeigh_ordrho_ii
-
-
-        delta_sorted = np.sort(-1 * self.delta) * -1
-        self.delta[rho_Ind[0]] = delta_sorted[1]
+        self.delta = delta  # np.iinfo(np.int32).max-->2147483647-->1290**3
+        self.IndNearNeigh = INN
+        self.Gradient = grad
+        # self.delta[rho_Ind[0]] = self.maxed
+        # self.IndNearNeigh[rho_Ind[0]] = rho_Ind[0]
+        # my_print('First step: calculating rho, delta and Gradient.' + '-' * 20, vosbe_=self.vosbe)
+        # # print('First step: calculating rho, delta and Gradient.' + '-' * 20)
+        #
+        # for ii in tqdm.tqdm(range(1, self.ND_num)):
+        #     # 密度降序排序后，即密度第ii大的索引(在rho中)
+        #     ordrho_ii = rho_Ind[ii]
+        #     rho_ii = rho_sorted[ii]  # 第ii大的密度值
+        #
+        #     delta_ordrho_ii = self.maxed
+        #     Gradient_ordrho_ii = 0
+        #     IndNearNeigh_ordrho_ii = 0
+        #     get_value = True  # 判断是否需要在大循环中继续执行，默认需要，一旦在小循环中赋值成功，就不在大循环中运行
+        #
+        #     point_ii_xy, idex1, bt1 = self.kc_coord_new(ordrho_ii, k1)
+        #     dist_ii_jj = np.sqrt(((point_ii_xy - bt1) ** 2).sum(1))  # 计算两点间的距离
+        #     for ordrho_jj, dist_i_j in zip(idex1, dist_ii_jj):
+        #         rho_jj = self.rho[ordrho_jj]  # 根据索引在rho里面取值
+        #         gradient = (rho_jj - rho_ii) / dist_i_j
+        #         if dist_i_j <= delta_ordrho_ii and gradient >= 0:
+        #             delta_ordrho_ii = dist_i_j
+        #             Gradient_ordrho_ii = gradient
+        #             IndNearNeigh_ordrho_ii = ordrho_jj
+        #             get_value = False
+        #
+        #     if get_value:
+        #         # 表明，在(2 * k1 + 1) * (2 * k1 + 1) * (2 * k1 + 1)的邻域中没有找到比该点高，距离最近的点，则在更大的邻域中搜索
+        #         # idex, bt = self.kc_coord(point_ii_xy, k2)
+        #         point_ii_xy, idex1, bt1 = self.kc_coord_new(ordrho_ii, k2)
+        #         dist_ii_jj = np.sqrt(((point_ii_xy - bt1) ** 2).sum(1))  # 计算两点间的距离
+        #         for ordrho_jj, dist_i_j in zip(idex1, dist_ii_jj):
+        #             rho_jj = self.rho[ordrho_jj]  # 根据索引在rho里面取值
+        #             gradient = (rho_jj - rho_ii) / dist_i_j
+        #             if dist_i_j <= delta_ordrho_ii and gradient >= 0:
+        #                 delta_ordrho_ii = dist_i_j
+        #                 Gradient_ordrho_ii = gradient
+        #                 IndNearNeigh_ordrho_ii = ordrho_jj
+        #                 get_value = False
+        #
+        #     if get_value:
+        #         delta_ordrho_ii = k2 + 0.0001
+        #         Gradient_ordrho_ii = -1
+        #         IndNearNeigh_ordrho_ii = self.ND
+        #
+        #     self.delta[ordrho_ii] = delta_ordrho_ii
+        #     self.Gradient[ordrho_ii] = Gradient_ordrho_ii
+        #     self.IndNearNeigh[ordrho_ii] = IndNearNeigh_ordrho_ii
         t1_ = time.time()
         my_print(' ' * 10 + 'delata, rho and Gradient are calculated, using %.2f seconds.' % (t1_ - t0_), self.vosbe)
-        # print(' ' * 10 + 'delata, rho and Gradient are calculated, using %.2f seconds.' % (t1_ - t0_))
         self.result.calculate_time[0] = t1_ - t0_
         t0_ = time.time()
-        loc_LDC_outcat, LDC_outcat, mask = self.extra_outcat(rho_Ind)
+        clusterInd = assignation(self.rho, delta, delta_min, self.para.rho_min, self.para.v_min, rho_Ind, INN)
+
+        clumpInd = en_edge(clusterInd, self.rho, grad, self.para.gradmin, self.para.v_min)
+        label_data = clumpInd.reshape(data.shape)
+        loc_LDC_outcat, LDC_outcat = self.extra_record(label_data)
+        mask = label_data
+        # loc_LDC_outcat, LDC_outcat, mask = self.extra_outcat(rho_Ind)
         t1_ = time.time()
         self.result.calculate_time[1] = t1_ - t0_
         my_print(' ' * 10 + 'Outcats are calculated, using %.2f seconds.' % (t1_ - t0_), self.vosbe)
@@ -611,6 +615,53 @@ class LocalDensityCluster:
         self.result.mask = mask
         self.result.data = self.data
         self.result.para = self.para
+
+    def extra_record(self, label_data):
+        print('props')
+        dim = self.data.data_cube.ndim
+        props = measure.regionprops_table(label_image=label_data, intensity_image=self.data.data_cube,
+                                          properties=['weighted_centroid', 'area', 'mean_intensity',
+                                                      'weighted_moments_central', 'max_intensity',
+                                                      'image_intensity', 'bbox'])
+        image_intensity = props['image_intensity']
+        max_intensity = props['max_intensity']
+        bbox = np.array([props['bbox-%d' % item] for item in range(dim)])
+        Peak123 = np.zeros([dim, image_intensity.shape[0]])
+        for ps_i, item in enumerate(max_intensity):
+            max_idx = np.argwhere(image_intensity[ps_i] == item)[0]
+            peak123 = max_idx + bbox[:, ps_i]
+            Peak123[:, ps_i] = peak123.T
+
+        clump_Cen = np.array([props['weighted_centroid-2'], props['weighted_centroid-1'], props['weighted_centroid-0']])
+        size_3 = (props['weighted_moments_central-0-0-2'] / props['weighted_moments_central-0-0-0']) ** 0.5
+        size_2 = (props['weighted_moments_central-0-2-0'] / props['weighted_moments_central-0-0-0']) ** 0.5
+        size_1 = (props['weighted_moments_central-2-0-0'] / props['weighted_moments_central-0-0-0']) ** 0.5
+
+        clump_Volume = props['area']
+        clump_Peak = props['max_intensity']
+        clump_Sum = clump_Volume * props['mean_intensity']
+        clump_Size = 2.3548 * np.array([size_3, size_2, size_1])
+        clump_Peak123 = Peak123 + 1
+        clump_Cen = clump_Cen + 1  # python坐标原点是从0开始的，在这里整体加1，改为以1为坐标原点
+        id_clumps = np.array([item + 1 for item in range(label_data.max())], np.int32).T
+        id_clumps = id_clumps.reshape([id_clumps.shape[0], 1])
+        LDC_outcat = np.column_stack(
+            (id_clumps, clump_Peak123.T, clump_Cen.T, clump_Size.T, clump_Peak.T, clump_Sum.T, clump_Volume.T))
+        if dim == 3:
+            table_title = ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'Peak',
+                           'Sum', 'Volume']
+        else:
+            table_title = ['ID', 'Peak1', 'Peak2', 'Cen1', 'Cen2', 'Size1', 'Size2', 'Peak', 'Sum', 'Volume']
+
+        LDC_outcat = pd.DataFrame(LDC_outcat, columns=table_title)
+        self.result.detect_num[0] = LDC_outcat.shape[0]
+        if self.para.touch:
+            LDC_outcat = self.touch_edge(LDC_outcat)
+            self.result.detect_num[1] = LDC_outcat.shape[0]
+
+        loc_LDC_outcat = self.get_outcat_local(LDC_outcat)
+        self.result.detect_num[2] = loc_LDC_outcat.shape[0]
+        return loc_LDC_outcat, LDC_outcat
 
     def extra_outcat(self, rho_Ind):
         rho = self.rho

@@ -129,6 +129,52 @@ def make_plot_wcs(data_name, loc_outcat_wcs_name, outcat_wcs_name):
     cbar = fig.colorbar(im0, cax=axes1)
     cbar.set_label('K m s${}^{-1}$')
 
+
+def display_data(data):
+    if data.ndim == 3:
+        fig = plt.figure(figsize=(15, 8))
+
+        ax1 = fig.add_subplot(1, 3, 1)
+        ax2 = fig.add_subplot(1, 3, 2)
+        ax3 = fig.add_subplot(1, 3, 3)
+        im0 = ax1.imshow(data.sum(0), origin='lower')  # x银纬,y银经
+        im1 = ax2.imshow(data.sum(1), origin='lower')  # x银纬，y速度
+        im2 = ax3.imshow(data.sum(2), origin='lower')  # x银经，y速度
+        return fig, (ax1, ax2, ax3)
+
+
+def display_clumps_fitting(pif_1, df_temp_1, points_all_df, fig_name):
+    data = get_data_points(points_all_df)
+    fig, (ax, ax1, ax2) = display_data(data)
+    ax.scatter(pif_1['Cen3'], pif_1['Cen2'], c='r')
+    ax1.scatter(pif_1['Cen3'], pif_1['Cen1'], c='r')
+    ax2.scatter(pif_1['Cen2'], pif_1['Cen1'], c='r', label='fitting')
+
+    pif_2 = df_temp_1[['Cen1', 'Cen2', 'Cen3']] - points_all_df[['x_2', 'y_1', 'v_0']].values.min(axis=0)
+    ax.scatter(pif_2['Cen3'], pif_2['Cen2'], c='k')
+    ax1.scatter(pif_2['Cen3'], pif_2['Cen1'], c='k')
+    ax2.scatter(pif_2['Cen2'], pif_2['Cen1'], c='k', label='ldc')
+
+    ax2.legend(loc='best', framealpha=0.5)
+    p_1_1, p_1_2, p_2_1, p_2_2 = pif_1['Cen3'].values, pif_2['Cen3'].values, pif_1['Cen2'].values, pif_2[
+        'Cen2'].values
+    for ii in range(p_1_1.shape[0]):
+        ax.plot([p_1_1[ii], p_1_2[ii]], [p_2_1[ii], p_2_2[ii]], 'r')
+
+    p_1_1, p_1_2, p_2_1, p_2_2 = pif_1['Cen3'].values, pif_2['Cen3'].values, pif_1['Cen1'].values, pif_2[
+        'Cen1'].values
+    for ii in range(p_1_1.shape[0]):
+        ax1.plot([p_1_1[ii], p_1_2[ii]], [p_2_1[ii], p_2_2[ii]], 'r')
+
+    p_1_1, p_1_2, p_2_1, p_2_2 = pif_1['Cen2'].values, pif_2['Cen2'].values, pif_1['Cen1'].values, pif_2[
+        'Cen1'].values
+    for ii in range(p_1_1.shape[0]):
+        ax2.plot([p_1_1[ii], p_1_2[ii]], [p_2_1[ii], p_2_2[ii]], 'r')
+
+    fig.savefig(fig_name)
+    plt.close(fig)
+
+
 def make_plot_wcs_1(outcat_wcs, data_wcs, data_cube, fig_name=''):
     """
     在积分图上绘制检测结果

@@ -3,15 +3,14 @@ import os
 import time
 import pandas as pd
 from tqdm import tqdm
-
 from fit_clump_function import multi_gauss_fitting_new, touch_clump
 from tools.ultil_lxy import create_folder, get_points_by_clumps_id, move_csv_png, restruct_fitting_outcat,\
     get_save_clumps_xyv
 from tools.show_clumps import display_clumps_fitting
-from other.locatDenClust2 import Data
+from DensityClust.localDenClust2 import Data
 
 
-def fitting_LDC_clumps(points_path, outcat_name, data_rms, ldc_mgm_path=None, fitting_outcat_path=None):
+def fitting_LDC_clumps(points_path, outcat_name, data_rms, save_png=False, ldc_mgm_path=None, fitting_outcat_path=None):
     """
     对LDC的检测结果进行3维高斯拟合，保存分子云核的参数
     拟合核表 DataFrame格式
@@ -71,9 +70,10 @@ def fitting_LDC_clumps(points_path, outcat_name, data_rms, ldc_mgm_path=None, fi
         else:
             outcat_fitting.to_csv(fit_outcat_name, sep='\t', index=False)
 
-        pif_1 = outcat_fitting[['Cen1', 'Cen2', 'Cen3']] - points_all_df[['x_2', 'y_1', 'v_0']].values.min(axis=0)
-        df_temp_1 = f_outcat.iloc[item_tcr - 1]
-        display_clumps_fitting(pif_1, df_temp_1, points_all_df, fig_name)
+        if save_png:
+            pif_1 = outcat_fitting[['Cen1', 'Cen2', 'Cen3']] - points_all_df[['x_2', 'y_1', 'v_0']].values.min(axis=0)
+            df_temp_1 = f_outcat.iloc[item_tcr - 1]
+            display_clumps_fitting(pif_1, df_temp_1, points_all_df, fig_name)
 
     print('=' * 20 + '\n', file=file)
     move_csv_png(ldc_mgm_path)
@@ -86,12 +86,13 @@ def fitting_LDC_clumps(points_path, outcat_name, data_rms, ldc_mgm_path=None, fi
     return fitting_outcat_path
 
 
-def MGM_main(outcat_name_pix, origin_name, mask_name, save_path):
+def MGM_main(outcat_name_pix, origin_name, mask_name, save_path, save_png=False):
     """
     outcat_name_loc: LDC 检测像素核表
     origin_name: 检测的原始数据
     mask_name: LDC检测得到的mask
     save_path: 拟合结果保存位置
+    save_png: 是否保存拟合结果的图片，默认为False：不保存
     """
     # 初始化对应文件保存路径
     if not os.path.exists(outcat_name_pix):
@@ -114,7 +115,7 @@ def MGM_main(outcat_name_pix, origin_name, mask_name, save_path):
     # step 2: 进行拟合并保存拟合像素级核表
     data_int = Data(origin_name)
     data_rms = data_int.rms
-    fitting_outcat_path = fitting_LDC_clumps(points_path, outcat_name_pix, data_rms, ldc_mgm_path)
+    fitting_outcat_path = fitting_LDC_clumps(points_path, outcat_name_pix, data_rms, save_png, ldc_mgm_path)
 
     # step 3: 将拟合核表整理成最终核表并保存
     data_int.get_wcs()
