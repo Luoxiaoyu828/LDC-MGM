@@ -80,3 +80,6 @@ compare_version(sop, dop, msp)函数 用于匹配两个核表及对应的云核�
 
 1.2.6--1.2.7
 将MGM加入到LDC_MGM_main.py中，和原来的LocalDensityClustering_main.py调用方式保存一致
+
+1.2.7-->1.2.8
+修复MGM过程中，没有取局部核表。
