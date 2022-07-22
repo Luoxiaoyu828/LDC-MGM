@@ -11,6 +11,7 @@ DensityClust/__pycache__/*.pyc
 other/yyy.py
 *.fits
 *.csv
+temp.py
 
 requirements.txt
 setup.py
