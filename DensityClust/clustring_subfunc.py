@@ -1,11 +1,12 @@
 import numpy as np
-import time
+from scipy import ndimage
 from astropy import wcs
 from tabulate import tabulate
 import astropy.io.fits as fits
 import pandas as pd
 from scipy.spatial import kdtree as kdt
 import tqdm
+import threading
 
 
 def setdiff_nd(a1, a2):
@@ -322,13 +323,16 @@ def my_print(str_='', vosbe_=False):
         print(str_)
 
 
-def get_feature(rho, rho_sort_idx, kdt_xx, num, r):
+def get_feature(rho, rho_Ind, kdt_xx, num, r):
+    """
+    1.3.0版本中计算参数的函数
+    """
     INN = np.zeros_like(rho, np.int32)
     delta = np.zeros_like(rho, np.float32)
     grad = np.zeros_like(rho, np.float32) - 1
     i = 0
-    for rho_i_idx in tqdm.tqdm(rho_sort_idx[1: num]):
-        rho_i_idx_up = rho_sort_idx[: i+1]
+    for rho_i_idx in tqdm.tqdm(rho_Ind[1: num]):
+        rho_i_idx_up = rho_Ind[: i + 1]
         rho_i_point = kdt_xx.data[rho_i_idx]
         ball_idx = kdt_xx.query_ball_point(rho_i_point, r=r, workers=4)
         ball_idx.remove(rho_i_idx)
@@ -344,7 +348,174 @@ def get_feature(rho, rho_sort_idx, kdt_xx, num, r):
         delta[rho_i_idx] = near_dis
         grad[rho_i_idx] = (rho[gloab_idx[near_idx]] - rho[rho_i_idx]) / near_dis
         i += 1
-    delta[rho_sort_idx[0]] = delta.max()
+    delta[rho_Ind[0]] = delta.max()
+    return INN, delta, grad
+
+
+def get_feature_thre(rho, rho_Ind, kdt_xx, r, INN, delta, grad, st, end_, ii, kk, thresh_num):
+    """
+    采用多线程计算
+    """
+    i = ii
+    k = 1
+    rho_Ind_thre = rho_Ind[st: end_]
+    for rho_i_idx in rho_Ind_thre:
+        rho_i_idx_up = rho_Ind[: i + 1]
+        rho_i_point = kdt_xx.data[rho_i_idx]
+        ball_idx = kdt_xx.query_ball_point(rho_i_point, r=r, workers=4)
+        ball_idx.remove(rho_i_idx)
+        inter_sec = np.intersect1d(rho_i_idx_up, np.array(ball_idx))
+        if inter_sec.shape[0] > 0:
+            kdt_i_idx_up = kdt.KDTree(kdt_xx.data[inter_sec])
+            gloab_idx = inter_sec
+        else:
+            kdt_i_idx_up = kdt.KDTree(kdt_xx.data[rho_i_idx_up])
+            gloab_idx = rho_i_idx_up
+            k += 1
+
+        near_dis, near_idx = kdt_i_idx_up.query(rho_i_point, k=1, workers=4)
+        INN[rho_i_idx] = gloab_idx[near_idx]
+        delta[rho_i_idx] = near_dis
+        grad[rho_i_idx] = (rho[gloab_idx[near_idx]] - rho[rho_i_idx]) / near_dis
+        i += 1
+    print('threading number is %d/%d, glob %d' % (kk, thresh_num, k))
+
+
+def get_feature_loc_thre(rho_up, rho_Ind_loc, idx_rho_loc_glob, kd_tree_loc, r, INN, delta, grad, st, end_, ii, kk):
+    """
+    采用多线程计算
+    """
+    INN_loc = np.zeros_like(rho_Ind_loc, np.int32)
+    delta_loc = np.zeros_like(rho_Ind_loc, np.float32)
+    grad_loc = np.zeros_like(rho_Ind_loc, np.float32) - 1
+    i = ii
+    k = 0
+    rho_ind_loc_temp = rho_Ind_loc[st: end_]
+    for rho_i_idx in rho_ind_loc_temp:
+        rho_i_idx_up = rho_Ind_loc[: i + 1]
+        rho_i_point = kd_tree_loc.data[rho_i_idx]
+        ball_idx = kd_tree_loc.query_ball_point(rho_i_point, r=r, workers=1)
+        ball_idx.remove(rho_i_idx)
+        inter_sec = np.intersect1d(rho_i_idx_up, np.array(ball_idx))
+        if inter_sec.shape[0] > 0:
+            kdt_i_idx_up = kdt.KDTree(kd_tree_loc.data[inter_sec])
+            gloab_idx = inter_sec
+        else:
+            kdt_i_idx_up = kdt.KDTree(kd_tree_loc.data[rho_i_idx_up])
+            gloab_idx = rho_i_idx_up
+            k += 1
+        near_dis, near_idx = kdt_i_idx_up.query(rho_i_point, k=1, workers=1)   # 寻找最近的
+        INN_loc[rho_i_idx] = idx_rho_loc_glob[gloab_idx[near_idx]]
+        delta_loc[rho_i_idx] = near_dis
+        grad_loc[rho_i_idx] = (rho_up[gloab_idx[near_idx]] - rho_up[rho_i_idx]) / near_dis
+        i += 1
+
+    # INN[idx_rho_loc_glob] = INN_loc
+    INN[idx_rho_loc_glob[rho_ind_loc_temp]] = INN_loc[rho_ind_loc_temp]
+    delta[idx_rho_loc_glob[rho_ind_loc_temp]] = delta_loc[rho_ind_loc_temp]
+    grad[idx_rho_loc_glob[rho_ind_loc_temp]] = grad_loc[rho_ind_loc_temp]
+    print('threading number is %d, glob %d' % (kk, k))
+
+
+def get_feature_loc(rho_up, rho_Ind_loc, idx_rho_loc_glob, kd_tree_loc, r, ND_num, ND):
+    """
+    构建局部kdtree,进行聚类
+    """
+    INN_loc = np.zeros(ND_num, np.int32)
+    delta_loc = np.zeros(ND_num, np.float32)
+    grad_loc = np.zeros(ND_num, np.float32) - 1
+
+    INN = np.zeros(ND, np.int32)
+    delta = np.zeros(ND, np.float32)
+    grad = np.zeros(ND, np.float32) - 1
+
+    i = 0
+    k = 0
+    for rho_i_idx in tqdm.tqdm(rho_Ind_loc[1:]):
+        rho_i_idx_up = rho_Ind_loc[: i + 1]
+        rho_i_point = kd_tree_loc.data[rho_i_idx]
+        ball_idx = kd_tree_loc.query_ball_point(rho_i_point, r=r, workers=1)
+        ball_idx.remove(rho_i_idx)
+        inter_sec = np.intersect1d(rho_i_idx_up, np.array(ball_idx))
+        if inter_sec.shape[0] > 0:
+            kdt_i_idx_up = kdt.KDTree(kd_tree_loc.data[inter_sec])
+            gloab_idx = inter_sec
+        else:
+            kdt_i_idx_up = kdt.KDTree(kd_tree_loc.data[rho_i_idx_up])
+            gloab_idx = rho_i_idx_up
+            k += 1
+        near_dis, near_idx = kdt_i_idx_up.query(rho_i_point, k=1, workers=1)   # 寻找最近的
+
+        INN_loc[rho_i_idx] = idx_rho_loc_glob[gloab_idx[near_idx]]
+        delta_loc[rho_i_idx] = near_dis
+        grad_loc[rho_i_idx] = (rho_up[gloab_idx[near_idx]] - rho_up[rho_i_idx]) / near_dis
+        i += 1
+    delta_loc[rho_Ind_loc[0]] = delta_loc.max()
+
+    INN[idx_rho_loc_glob] = INN_loc
+    delta[idx_rho_loc_glob] = delta_loc
+    grad[idx_rho_loc_glob] = grad_loc
+    print('threading number is %d' % k)
+    return INN, delta, grad
+
+
+def get_feature_loc_threshing(rho_up, rho_Ind_loc, idx_rho_loc_glob, kd_tree_loc, r, ND_num, ND, thresh_num=5):
+    """
+    多线程调用函数
+    """
+    INN = np.zeros(ND, np.int32)
+    delta = np.zeros(ND, np.float32)
+    grad = np.zeros(ND, np.float32) - 1
+    tsk = []
+    deal_num = ND_num // thresh_num
+    for thre_i in range(thresh_num):
+        st = thre_i * deal_num
+        end_ = (thre_i + 1) * deal_num
+        if thre_i == 0:
+            st = 1
+        if thre_i == thresh_num - 1:
+            end_ = ND_num
+        csum_i = st - 1
+        t1 = threading.Thread(target=get_feature_loc_thre,
+                              args=(
+                              rho_up, rho_Ind_loc, idx_rho_loc_glob, kd_tree_loc, r, INN, delta, grad, st, end_, csum_i,
+                              thre_i))
+        tsk.append(t1)
+    for t in tsk:
+        t.start()
+    for t in tsk:
+        t.join()
+    delta[idx_rho_loc_glob[rho_Ind_loc[0]]] = delta.max()
+    return INN, delta, grad
+
+
+def get_feature_threshing(rho, rho_Ind, kdt_xx, ND_num, r, thresh_num=5):
+    """
+    构建全局kdtree,用多线程计算
+    """
+    INN = np.zeros_like(rho_Ind, np.int32)
+    delta = np.zeros_like(rho_Ind, np.float32)
+    grad = np.zeros_like(rho_Ind, np.float32) - 1
+
+    tsk = []
+    deal_num = ND_num // thresh_num
+    for thre_i in range(thresh_num):
+        st = thre_i * deal_num
+        end_ = (thre_i + 1) * deal_num
+
+        if thre_i == 0:
+            st = 1
+        if thre_i == thresh_num - 1:
+            end_ = ND_num
+        csum_i = st - 1
+        t1 = threading.Thread(target=get_feature_thre,
+                              args=(rho, rho_Ind, kdt_xx, r, INN, delta, grad, st, end_, csum_i, thre_i, thresh_num))
+        tsk.append(t1)
+    for t in tsk:
+        t.start()
+    for t in tsk:
+        t.join()
+    delta[rho_Ind[0]] = delta.max()
     return INN, delta, grad
 
 
@@ -374,13 +545,25 @@ def get_feature_new(rho, rho_sort_idx, kdt_xx_loc, num, r):
     return INN, delta, grad
 
 
-def assignation(rho, delta, delta_min, rho_min, v_min, rho_sort_idx, INN):
+def assignation(rho, delta, delta_min, rho_min, v_min, rho_Ind, INN):
+    """
+    根据INN将点分配到不同的类别中去，并用统一的数字编号
+
+    rho: 对数据的密度估计[ND * 1]，对data_cube直接拉直
+    delta: 每个点的距离
+    delta_min: 算法参数，距离最小值[4]
+    rho_min: 算法参数，类中心密度最小值[3*rms]
+    v_min: 算法参数，体积最小值[27]
+    rho_Ind: 对rho降序排序的索引rho[rho_Ind[0]]为最大值
+    INN: 两个密度点的联系 % index of nearest neighbor with higher density
+        INN[i] = j 表示比第i个点大的点中最近的点为第j个点
+    """
     clust_index = np.intersect1d(np.where(rho > rho_min), np.where(delta > delta_min))
     clusterInd = -1 * np.ones_like(rho, np.int32)
     clusterInd[clust_index] = np.arange(clust_index.shape[0]) + 1
 
     for i in range(rho.shape[0]):
-        ordrho_i = rho_sort_idx[i]
+        ordrho_i = rho_Ind[i]
         if clusterInd[ordrho_i] == -1:  # not centroid
             clusterInd[ordrho_i] = clusterInd[INN[ordrho_i]]
 
@@ -394,10 +577,19 @@ def assignation(rho, delta, delta_min, rho_min, v_min, rho_sort_idx, INN):
     return clusterInd_
 
 
-def en_edge(clusterInd, rho, grad, gradmin, v_min):
+def divide_boundary_by_grad(clusterInd, rho, grad, gradmin, v_min, data_shape):
+    """
+    根据梯度确定边界，
+    clusterInd: 聚类编号[ND * 1],同一个类用一个数字标记
+    rho: 对数据的密度估计[ND * 1]，对data_cube直接拉直
+    grad: 每个点的梯度
+    gradmin: 算法参数，梯度最小值[0.01]
+    v_min: 算法参数，体积最小值[27]
+    data_shape: 处理的数据块尺寸[m*n*k]
+    """
     clump_id = 0
     clumpInd = np.zeros_like(clusterInd, np.int32)
-    for cluster_i in range(1, clusterInd.max() + 1, 1):
+    for cluster_i in tqdm.tqdm(range(1, clusterInd.max() + 1, 1)):
         index_cluster_i = np.where(clusterInd == cluster_i)[0]
         clump_rho = rho[index_cluster_i]
         clump_grad = grad[index_cluster_i]
@@ -412,18 +604,95 @@ def en_edge(clusterInd, rho, grad, gradmin, v_min):
         if index_cluster.shape[0] > v_min:
             clump_id += 1
             idx_cluster = index_cluster_i[index_cluster]
+
+            # clumpInd = np.zeros_like(clusterInd, np.int32)
             clumpInd[idx_cluster] = clump_id
-    return clumpInd
+            # label_data_ = clumpInd.reshape(data_shape)
+            # label_data_ = ndimage.binary_fill_holes(label_data_).astype(np.int32)
+            # label_data += label_data_
+        label_data = clumpInd.reshape(data_shape)
+    return label_data
+
+
+def divide_boundary_by_grad_fill(clusterInd, rho, grad, gradmin, v_min, data_shape):
+    """
+    根据梯度确定边界，填充空洞
+    clusterInd: 聚类编号[ND * 1],同一个类用一个数字标记
+    rho: 对数据的密度估计[ND * 1]，对data_cube直接拉直
+    grad: 每个点的梯度
+    gradmin: 算法参数，梯度最小值[0.01]
+    v_min: 算法参数，体积最小值[27]
+    data_shape: 处理的数据块尺寸[m*n*k]
+    """
+    clump_id = 0
+    label_data = np.zeros(data_shape, np.in32)
+    for cluster_i in tqdm.tqdm(range(1, clusterInd.max() + 1, 1)):
+        index_cluster_i = np.where(clusterInd == cluster_i)[0]
+        clump_rho = rho[index_cluster_i]
+        clump_grad = grad[index_cluster_i]
+        rho_max_min = clump_rho.max() - clump_rho.min()
+
+        clump_grad_i = clump_grad / rho_max_min
+        index_grad = np.where(clump_grad_i > gradmin)[0]
+        rho_cc_mean = clump_rho[index_grad].mean()
+
+        index_cc_rho = np.where(clump_rho > rho_cc_mean)[0]
+        index_cluster = np.union1d(index_cc_rho, index_grad)
+        if index_cluster.shape[0] > v_min:
+            clump_id += 1
+            idx_cluster = index_cluster_i[index_cluster]
+            clumpInd = np.zeros_like(clusterInd, np.int32)
+            clumpInd[idx_cluster] = clump_id
+            label_data_ = clumpInd.reshape(data_shape)
+            label_data_ = ndimage.binary_fill_holes(label_data_).astype(np.int32)
+            label_data += label_data_
+    return label_data
 
 
 if __name__ == '__main__':
-    xm, ym, zm = 100, 80, 120
-    r = 4
-    delta_ii_xy = np.array([43, 22, 109])
-    t0 = time.time()
-    index, index_value = kc_coord_3d(delta_ii_xy, xm, ym, zm, r)
-    t1 = time.time()
-    print((t1-t0) * 10000000)
-    delta_ii_xy = np.array([43, 22])
-    aa1 = kc_coord_2d(delta_ii_xy, xm, ym, r)
-    xx = get_xyz(np.zeros([50, 50]))
+    # data = np.array([1.1, 1.5, 2.31, 1.8, 1.4, 1.3, 0.8, 0.85, 0.9, 1.3, 1.5, 1.6, 1.8, 1.9, 2.3, 1.7, 1.3, 1.2, 0.8])
+    # # data = np.array([1.1, 1.5, 2.31, 1.8, 1.4, 1.3, 0.8, 0.85])
+    # # data = np.concatenate([data, data, data, data])
+    # # data[21] = 2.31 - 0.001
+    # # data[40] = 2.31 - 0.002
+    # # data[59] = 2.31 - 0.003
+    # x = np.arange(1, data.shape[0]+1, 1).reshape([data.shape[0], 1]) - 1
+    # rho = data
+    # rho_Ind = np.argsort(-rho)
+    # kdt_xx = kdt.KDTree(x)
+    # r = 6
+    # noise = 0.9
+    # idx_rho_loc_glob = np.where(rho > noise)[0]
+    # rho_up = rho[idx_rho_loc_glob]
+    # ND_num = rho_up.shape[0]
+    # ND = rho.shape[0]
+    # rho_Ind_loc = np.argsort(-rho_up)
+    #
+    # aa = x[idx_rho_loc_glob]
+    #
+    # kd_tree_loc = kdt.KDTree(aa)
+    #
+    # INN, delta, grad = get_feature(rho, rho_Ind, kdt_xx, ND_num, r)
+    # #
+    # INN1, delta1, grad1 = get_feature_loc(rho_up, rho_Ind_loc, idx_rho_loc_glob, kd_tree_loc, r, ND_num, ND)
+    # #
+    # # INN2_, delta2_, grad2_ = get_feature_threshing(rho, rho_Ind, kdt_xx, num, r)
+    #
+    # INN3, delta3, grad3 = get_feature_loc_threshing(rho_up, rho_Ind_loc, idx_rho_loc_glob, kd_tree_loc, r, ND_num, ND,
+    #                                                 thresh_num=2)
+    # #
+    # # print('*'*10)
+    # print(INN)
+    # print(INN1)
+    # print(INN3)
+    # IIII = np.vstack([INN,INN3]).T
+    # print(np.vstack([INN,INN]))
+    # # print(INN2_)
+    # print(np.abs(INN - INN3).sum())
+    # print(np.abs(grad - grad3).sum())
+    # print(np.abs(delta - delta3).sum())
+    #
+    # plt.figure()
+    # plt.plot(INN, INN3, '.')
+    # plt.show()
+    pass

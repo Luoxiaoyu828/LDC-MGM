@@ -113,7 +113,8 @@ def LDC_MGM_main(data_name, para, save_folder=None, split=False, save_loc=False,
 
 
 if __name__ == '__main__':
-    data_name = r'D:\LDC\test_data\synthetic\synthetic_model_0000_00.fits'
+    num = 2
+    data_name = r'D:\LDC\test_data\synthetic\synthetic_model_000%d.fits' % num
     para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=5, rms_times=2)
     para.touch = False
     save_folder = r'D:\LDC\test_data\R2_R16_region\0145-005_L13_noise_2_rho_5_128_deb1'

@@ -3,20 +3,20 @@ import astropy.io.fits as fits
 import tqdm
 from astropy import wcs
 from astropy.coordinates import SkyCoord
-from skimage import filters, measure
+from skimage import filters
 import numpy as np
+from skimage import measure
+from scipy import ndimage
 import pandas as pd
 import time
 from scipy.spatial import KDTree as kdt
 import matplotlib.pyplot as plt
 from DensityClust.clustring_subfunc import \
     get_xyz, setdiff_nd, my_print
-from DensityClust.clustring_subfunc import assignation, divide_boundary_by_grad
+from DensityClust.clustring_subfunc import get_feature_loc_threshing, get_feature_loc, get_feature, \
+    get_feature_threshing, assignation, divide_boundary_by_grad
 from Generate.fits_header import Header
 
-"""
-对1.2.8版本中，计算核表进行改进,先生成mask再基于mask计算核表。
-"""
 
 class Data:
     def __init__(self, data_path=''):
@@ -137,7 +137,7 @@ class Param:
         para.dc: Standard deviation of Gaussian filtering
     """
 
-    def __init__(self, delta_min=4, gradmin=0.01, v_min=27, noise_times=2, rms_times=3, dc=None):
+    def __init__(self, delta_min=4, gradmin=0.01, v_min=27, noise_times=2, rms_times=3, thread_num=8, dc=None):
         self.noise = None
         self.rho_min = None
         self.v_min = v_min
@@ -145,6 +145,7 @@ class Param:
         self.delta_min = delta_min
         self.touch = True
         self.para_inf = None
+        self.thread_num = thread_num
 
         self.noise_times = noise_times
         self.rms_times = rms_times
@@ -304,6 +305,10 @@ class DetectResult:
         plt.rcParams['ytick.right'] = 'True'
         plt.rcParams['xtick.color'] = 'red'
         plt.rcParams['ytick.color'] = 'red'
+        # data_name = r'R2_data\data_9\0180-005\0180-005_L.fits'
+        # fits_path = data_name.replace('.fits', '')
+        # title = fits_path.split('\\')[-1]
+        # fig_name = os.path.join(fits_path, title + '.png')
 
         outcat_wcs = self.outcat_wcs
         data_wcs = self.data.wcs
@@ -354,16 +359,21 @@ class LocalDensityCluster:
     def __init__(self, data, para):
         # 参数初始化
 
-        self.kd_tree = None
+        self.rho = None
+        self.INN = None
+        self.grad = None
+        self.kdt_xx = None
         self.ND_num = None
+        self.kd_tree_loc = None
         self.data = data
         self.para = para
+        # self.para.set_rms_by_data(data)
 
         self.result = DetectResult()
         self.xx = None
         self.delta = None
-        self.INN = None
-        self.grad = None
+        self.IndNearNeigh = None
+        self.Gradient = None
         self.vosbe = False
 
         maxed = 0
@@ -452,32 +462,35 @@ class LocalDensityCluster:
         :param point_ii_xy: 当前点坐标(x,y,z)
         :param r: 2 * r + 1
         :return:
-        返回delta_ii_xy点r邻域(立方体)的点坐标
+        返回delta_ii_xy点r邻域的点坐标
+
+        : xm: size_x
+        : ym: size_y
+        : zm: size_z
         """
-        point_ii_xy = self.kd_tree.data[ordrho_ii]
+        point_ii_xy = self.kdt_xx.data[ordrho_ii]
         n_dim = self.data.n_dim
-        idex1 = self.kd_tree.query_ball_point(point_ii_xy, r=r*np.sqrt(n_dim) + 0.0001, workers=4)
+        idex1 = self.kdt_xx.query_ball_point(point_ii_xy, r=r * np.sqrt(n_dim) + 0.0001, workers=4)
         idex1.remove(ordrho_ii)  # 删除本身
         idex1 = np.array(idex1, np.int32)
-        point_j_xy = self.kd_tree.data[idex1]
+        bt1 = self.kdt_xx.data[idex1]
 
-        # 将点限制在立方体里面
-        bb = np.abs(point_j_xy - point_ii_xy).max(1)
+        bb = np.abs(bt1 - point_ii_xy).max(1)
         d_idx = np.where(bb <= r)[0]
-        point_j_xy = point_j_xy[d_idx, :]
 
+        bt1 = bt1[d_idx, :]
         idex1 = idex1[d_idx]
         if n_dim == 3:
-            aa = np.lexsort((point_j_xy[:, 2], point_j_xy[:, 1], point_j_xy[:, 0]))
+            aa = np.lexsort((bt1[:, 2], bt1[:, 1], bt1[:, 0]))
             # 按照x>y>z的优先级排序
         elif n_dim == 2:
-            aa = np.lexsort((point_j_xy[:, 1], point_j_xy[:, 0]))
+            aa = np.lexsort((bt1[:, 1], bt1[:, 0]))
             # 按照x>y>z的优先级排序
-        point_j_xy = point_j_xy[aa, :]
+        bt1 = bt1[aa, :]
         idex1 = idex1[aa]
-        return point_ii_xy, idex1, point_j_xy
+        return point_ii_xy, idex1, bt1
 
-    def esti_rho(self, save_esti=False):
+    def esti_rho(self, save_esti=True):
         esti_file = self.data.data_path.replace('.fits', '_esti.fits')
         if os.path.exists(esti_file):
             print('find the rho file.')
@@ -503,69 +516,17 @@ class LocalDensityCluster:
                 fits.writeto(esti_file, data_esmit_rr)
         return data_esmit_rr
 
-    def build_kd_tree(self, rho):
-        aa = self.xx[rho > self.para.noise]
+    def build_kd_tree(self):
+        aa = self.xx[self.rho > self.para.noise]
         self.ND_num = aa.shape[0]
-        # kd_tree = kdt(aa)
-        # rho_up = self.rho[self.rho > self.para.noise]
-        # self.idx_rho = np.where(self.rho > self.para.noise)[0]
-        self.kd_tree = kdt(self.xx)
-
-    def get_feature_128(self, rho_Ind, rho_sorted, maxed, rho, delta_min):
-
-        k1 = 1  # 第1次计算点的邻域大小
-        k2 = np.ceil(delta_min).astype(np.int32)
-        for ii in tqdm.tqdm(range(1, self.ND_num)):
-            # 密度降序排序后，即密度第ii大的索引(在rho中)
-            ordrho_ii = rho_Ind[ii]
-            rho_ii = rho_sorted[ii]  # 第ii大的密度值
-
-            delta_ordrho_ii = maxed
-            Gradient_ordrho_ii = 0
-            IndNearNeigh_ordrho_ii = 0
-            get_value = True  # 判断是否需要在大循环中继续执行，默认需要，一旦在小循环中赋值成功，就不在大循环中运行
-
-            point_ii_xy, idex1, bt1 = self.kc_coord_new(ordrho_ii, k1)
-            dist_ii_jj = np.sqrt(((point_ii_xy - bt1) ** 2).sum(1))  # 计算两点间的距离
-            for ordrho_jj, dist_i_j in zip(idex1, dist_ii_jj):
-                rho_jj = rho[ordrho_jj]  # 根据索引在rho里面取值
-                gradient = (rho_jj - rho_ii) / dist_i_j
-                if dist_i_j <= delta_ordrho_ii and gradient >= 0:
-                    delta_ordrho_ii = dist_i_j
-                    Gradient_ordrho_ii = gradient
-                    IndNearNeigh_ordrho_ii = ordrho_jj
-                    get_value = False
-
-            if get_value:
-                # 表明，在(2 * k1 + 1) * (2 * k1 + 1) * (2 * k1 + 1)的邻域中没有找到比该点高，距离最近的点，则在更大的邻域中搜索
-                point_ii_xy, idex1, bt1 = self.kc_coord_new(ordrho_ii, k2)
-                dist_ii_jj = np.sqrt(((point_ii_xy - bt1) ** 2).sum(1))  # 计算两点间的距离
-                for ordrho_jj, dist_i_j in zip(idex1, dist_ii_jj):
-                    rho_jj = rho[ordrho_jj]  # 根据索引在rho里面取值
-                    gradient = (rho_jj - rho_ii) / dist_i_j
-                    if dist_i_j <= delta_ordrho_ii and gradient >= 0:
-                        delta_ordrho_ii = dist_i_j
-                        Gradient_ordrho_ii = gradient
-                        IndNearNeigh_ordrho_ii = ordrho_jj
-                        get_value = False
-
-            if get_value:
-                delta_ordrho_ii = k2 + 0.0001
-                Gradient_ordrho_ii = -1
-                IndNearNeigh_ordrho_ii = 0
-
-            self.delta[ordrho_ii] = delta_ordrho_ii
-            self.grad[ordrho_ii] = Gradient_ordrho_ii
-            self.INN[ordrho_ii] = IndNearNeigh_ordrho_ii
-
-        self.delta[rho_Ind[0]] = self.delta.max()
+        self.kd_tree_loc = kdt(aa)
+        self.kdt_xx = kdt(self.xx)
 
     def detect(self):
+        thread_num = self.para.thread_num
         t0_ = time.time()
         delta_min = self.para.delta_min
         data = self.data.data_cube
-        k1 = 1  # 第1次计算点的邻域大小
-        k2 = np.ceil(delta_min).astype(np.int32)  # 第2次计算点的邻域大小
         self.xx = get_xyz(data)  # xx: 3D data coordinates  坐标原点是 1
 
         # 密度估计
@@ -574,72 +535,37 @@ class LocalDensityCluster:
         else:
             data_estim = filters.gaussian(data, self.para.dc)
 
-        rho = data_estim.flatten()
-        self.build_kd_tree(rho)
-        rho_Ind = np.argsort(-rho)
-        rho_sorted = rho[rho_Ind[: self.ND_num]]
+        self.rho = data_estim.flatten()
+        self.build_kd_tree()
+        rho_Ind = np.argsort(-self.rho)
+        rho_up = self.rho[self.rho > self.para.noise]
+        rho_Ind_loc = np.argsort(-rho_up)
+        idx_rho_loc_glob = np.where(self.rho > self.para.noise)[0]
         # delta 记录距离，
-        # IndNearNeigh 记录：两个密度点的联系 % index of nearest neighbor with higher density
-        self.delta = np.zeros(self.ND, np.float32)  # np.iinfo(np.int32).max-->2147483647-->1290**3
-        self.INN = np.zeros(self.ND, np.int64)
-        self.grad = np.zeros(self.ND, np.float32)
-        for ii in tqdm.tqdm(range(1, self.ND_num)):
-            # 密度降序排序后，即密度第ii大的索引(在rho中)
-            ordrho_ii = rho_Ind[ii]
-            rho_ii = rho_sorted[ii]  # 第ii大的密度值
-
-            delta_ordrho_ii = self.maxed
-            Gradient_ordrho_ii = 0
-            IndNearNeigh_ordrho_ii = 0
-            get_value = True  # 判断是否需要在大循环中继续执行，默认需要，一旦在小循环中赋值成功，就不在大循环中运行
-
-            point_ii_xy, idex1, bt1 = self.kc_coord_new(ordrho_ii, k1)
-            dist_ii_jj = np.sqrt(((point_ii_xy - bt1) ** 2).sum(1))  # 计算两点间的距离
-            for ordrho_jj, dist_i_j in zip(idex1, dist_ii_jj):
-                rho_jj = rho[ordrho_jj]  # 根据索引在rho里面取值
-                gradient = (rho_jj - rho_ii) / dist_i_j
-                if dist_i_j <= delta_ordrho_ii and gradient >= 0:
-                    delta_ordrho_ii = dist_i_j
-                    Gradient_ordrho_ii = gradient
-                    IndNearNeigh_ordrho_ii = ordrho_jj
-                    get_value = False
-
-            if get_value:
-                # 表明，在(2 * k1 + 1) * (2 * k1 + 1) * (2 * k1 + 1)的邻域中没有找到比该点高，距离最近的点，则在更大的邻域中搜索
-                point_ii_xy, idex1, bt1 = self.kc_coord_new(ordrho_ii, k2)
-                dist_ii_jj = np.sqrt(((point_ii_xy - bt1) ** 2).sum(1))  # 计算两点间的距离
-                for ordrho_jj, dist_i_j in zip(idex1, dist_ii_jj):
-                    rho_jj = rho[ordrho_jj]  # 根据索引在rho里面取值
-                    gradient = (rho_jj - rho_ii) / dist_i_j
-                    if dist_i_j <= delta_ordrho_ii and gradient >= 0:
-                        delta_ordrho_ii = dist_i_j
-                        Gradient_ordrho_ii = gradient
-                        IndNearNeigh_ordrho_ii = ordrho_jj
-                        get_value = False
-
-            if get_value:
-                delta_ordrho_ii = k2 + 0.0001
-                Gradient_ordrho_ii = -1
-                IndNearNeigh_ordrho_ii = 0
-
-            self.delta[ordrho_ii] = delta_ordrho_ii
-            self.grad[ordrho_ii] = Gradient_ordrho_ii
-            self.INN[ordrho_ii] = IndNearNeigh_ordrho_ii
-
-        self.delta[rho_Ind[0]] = self.delta.max()
-        self.INN[rho_Ind[0]] = rho_Ind[0]
-        my_print('First step: calculating rho, delta and Gradient.' + '-' * 20, vosbe_=self.vosbe)
-        # print('First step: calculating rho, delta and Gradient.' + '-' * 20)
-
+        # INN 记录：两个密度点的联系 % index of nearest neighbor with higher density
+        # INN_, delta_, grad_ = get_feature(self.rho, rho_Ind, self.kdt_xx, self.ND_num, self.para.delta_min)
+        # INN, delta, grad = get_feature_threshing(self.rho, rho_Ind, self.kdt_xx, self.ND_num,
+        #                                                      self.para.delta_min, thresh_num=40)
+        if thread_num == 1:
+            self.INN, self.delta, self.grad = get_feature_loc(rho_up, rho_Ind_loc, idx_rho_loc_glob, self.kd_tree_loc,
+                                                              self.para.delta_min, self.ND_num, self.ND)
+        else:
+            print(time.ctime())
+            # self.INN, self.delta, self.grad = get_feature_loc_threshing(rho_up, rho_Ind_loc, idx_rho_loc_glob,
+            #                                                             self.kd_tree_loc, self.para.delta_min,
+            #                                                             self.ND_num, self.ND, thresh_num=thread_num)
+            self.INN, self.delta, self.grad = get_feature_threshing(self.rho, rho_Ind, self.kdt_xx, self.ND_num,
+                                                                    self.para.delta_min, thresh_num=thread_num)
+            print(time.ctime())
         t1_ = time.time()
         d_t = t1_ - t0_
         my_print(' ' * 10 + 'delata, rho and Gradient are calculated, using %.2f seconds.' % d_t, self.vosbe)
         self.result.calculate_time[0] = d_t
 
         t0_ = time.time()
-        clusterInd = assignation(rho, self.delta, delta_min, self.para.rho_min, self.para.v_min, rho_Ind, self.INN)
-        mask = divide_boundary_by_grad(clusterInd, rho, self.grad, self.para.gradmin, self.para.v_min, self.data.shape)
-
+        clusterInd = assignation(self.rho, self.delta, delta_min, self.para.rho_min, self.para.v_min, rho_Ind, self.INN)
+        clumpInd = divide_boundary_by_grad(clusterInd, self.rho, self.grad, self.para.gradmin, self.para.v_min)
+        mask = clumpInd.reshape(data.shape)
         loc_LDC_outcat, LDC_outcat = self.extra_record(mask)
 
         t1_ = time.time()
@@ -687,7 +613,7 @@ class LocalDensityCluster:
         id_clumps = np.array([item + 1 for item in range(label_data.max())], np.int32).T
         id_clumps = id_clumps.reshape([id_clumps.shape[0], 1])
         LDC_outcat = np.column_stack(
-            (id_clumps, clump_Peak123.T[:, ::-1], clump_Cen.T, clump_Size.T, clump_Peak.T, clump_Sum.T, clump_Volume.T))
+            (id_clumps, clump_Peak123.T, clump_Cen.T, clump_Size.T, clump_Peak.T, clump_Sum.T, clump_Volume.T))
         if dim == 3:
             table_title = ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'Peak',
                            'Sum', 'Volume']
@@ -698,11 +624,216 @@ class LocalDensityCluster:
         self.result.detect_num[0] = LDC_outcat.shape[0]
         if self.para.touch:
             LDC_outcat = self.touch_edge(LDC_outcat)
-        self.result.detect_num[1] = LDC_outcat.shape[0]
+            self.result.detect_num[1] = LDC_outcat.shape[0]
 
         loc_LDC_outcat = self.get_outcat_local(LDC_outcat)
         self.result.detect_num[2] = loc_LDC_outcat.shape[0]
         return loc_LDC_outcat, LDC_outcat
+
+    def extra_outcat(self, rho_Ind):
+        rho = self.rho
+        deltamin = self.para.delta_min
+        data = self.data.data_cube
+        dim = self.data.n_dim
+
+        # Initialize the return result: mask and out
+        mask = np.zeros_like(data, dtype=np.int64)
+        my_print('Second step: calculating Outcats.' + '-' * 30, self.vosbe)
+        # 根据密度和距离来确定类中心
+        clusterInd = -1 * np.ones(self.ND + 1)
+        clust_index = np.intersect1d(np.where(rho > self.para.rho_min), np.where(self.delta > deltamin))
+
+        clust_num = len(clust_index)
+        # icl是用来记录第i个类中心在xx中的索引值
+        icl = clust_index
+        n_clump = 0
+        for ii in clust_index:
+            n_clump += 1
+            clusterInd[ii] = n_clump
+        # assignation 将其他非类中心分配到离它最近的类中心中去
+        # clusterInd = -1 表示该点不是类的中心点，属于其他点，等待被分配到某个类中去
+        # 类的中心点的梯度Gradient被指定为 - 1
+
+        for i in range(self.ND):
+            ordrho_i = rho_Ind[i]
+            if clusterInd[ordrho_i] == -1:  # not centroid
+                clusterInd[ordrho_i] = clusterInd[self.IndNearNeigh[ordrho_i]]
+            else:
+                self.Gradient[ordrho_i] = -1  # 将类中心点的梯度设置为-1
+
+        clump_volume = np.zeros(n_clump)
+        for i in range(n_clump):
+            clump_volume[i] = np.where(clusterInd == (i + 1))[0].shape[0]
+        # centInd [类中心点在xx坐标下的索引值，类中心在centInd的索引值: 代表类别编号]
+        centInd = []
+        for i, item in enumerate(clump_volume):
+            if item >= self.para.v_min:
+                centInd.append([icl[i], i])
+        centInd = np.array(centInd, np.int64)
+
+        # 通过梯度确定边界后，还需要进一步利用最小体积来排除假核
+        n_clump = centInd.shape[0]
+        clump_sum, clump_volume, clump_peak = np.zeros([n_clump, 1]), np.zeros([n_clump, 1]), np.zeros([n_clump, 1])
+        clump_Cen, clump_size = np.zeros([n_clump, dim]), np.zeros([n_clump, dim])
+        clump_Peak = np.zeros([n_clump, dim], np.int64)
+        clump_ii = 0
+        if dim == 3:
+            for item_cent in tqdm.tqdm(centInd):
+                rho_cluster_i = np.zeros(self.ND, np.float32)
+                index_cluster_i = np.where(clusterInd == (item_cent[1] + 1))[0]  # centInd[i, 1] --> item[1] 表示第i个类中心的编号
+                clump_rho = rho[index_cluster_i]
+                rho_max_min = clump_rho.max() - clump_rho.min()
+                Gradient_ = self.Gradient.copy()
+                grad_clump_i = Gradient_ / rho_max_min
+                mask_grad = np.where(grad_clump_i > self.para.gradmin)[0]
+                index_cc = np.intersect1d(mask_grad, index_cluster_i)
+                rho_cluster_i[index_cluster_i] = rho[index_cluster_i]
+                rho_cc_mean = rho[index_cc].mean()
+                index_cc_rho = np.where(rho_cluster_i > rho_cc_mean)[0]
+                index_cluster_rho = np.union1d(index_cc, index_cc_rho)
+
+                # cl_i_index_xx = self.xx[index_cluster_rho, :] - 1  # -1 是为了在data里面用索引取值(从0开始)
+                # clusterInd  标记的点的编号是从1开始，  没有标记的点的编号为-1
+                cl_i_index = np.zeros_like(self.rho, np.int32)
+                cl_i_index[index_cluster_rho] = 1
+                cl_i = cl_i_index.reshape(self.data.shape)
+                # cl_i = np.zeros(data.shape, np.int64)
+                # for j, item in enumerate(cl_i_index_xx):
+                #     cl_i[item[2], item[1], item[0]] = 1
+
+                # 形态学处理
+                L = ndimage.binary_fill_holes(cl_i).astype(np.int32)
+                L = measure.label(L)  # Labeled input image. Labels with value 0 are ignored.
+                # STATS = measure.regionprops(L)
+
+                props = measure.regionprops_table(label_image=L, intensity_image=data,
+                                                  properties=['weighted_centroid', 'area', 'mean_intensity',
+                                                              'weighted_moments_central'])
+
+                Ar = props['mean_intensity'] * props['area']
+                ind = np.where(Ar == Ar.max())[0]
+                L[L != (ind[0] + 1)] = 0
+                cl_i = L / (ind[0] + 1)
+
+                clustNum = props['area'][ind[0]]
+                weighted_centroid = np.array(
+                    [props['weighted_centroid-2'], props['weighted_centroid-1'], props['weighted_centroid-0']])
+                if clustNum > self.para.v_min:
+
+                    clump_Cen[clump_ii, :] = weighted_centroid[:, ind[0]]
+                    clump_volume[clump_ii, 0] = clustNum
+                    clump_sum[clump_ii, 0] = Ar[ind[0]]
+
+                    size_3 = (props['weighted_moments_central-0-0-2'] / props['weighted_moments_central-0-0-0']) ** 0.5
+                    size_2 = (props['weighted_moments_central-0-2-0'] / props['weighted_moments_central-0-0-0']) ** 0.5
+                    size_1 = (props['weighted_moments_central-2-0-0'] / props['weighted_moments_central-0-0-0']) ** 0.5
+                    # x_i = coords - clump_Cen[clump_ii, :]
+                    # clump_size[clump_ii, :] = 2.3548 * np.sqrt((np.matmul(clump_i_, x_i ** 2) / clustsum)
+                    #                                            - (np.matmul(clump_i_, x_i) / clustsum) ** 2)
+                    clump_size[clump_ii, :] = 2.3548 * np.array([size_3[ind[0]], size_2[ind[0]], size_1[ind[0]]])
+
+                    clump_i = data * cl_i
+
+                    mask = mask + cl_i * (clump_ii + 1)
+                    clump_peak[clump_ii, 0] = clump_i.max()
+                    clump_Peak[clump_ii, [2, 1, 0]] = np.argwhere(clump_i == clump_i.max())[0]
+                    clump_ii += 1
+                else:
+                    pass
+        else:
+            for i, item_cent in enumerate(centInd):  # centInd[i, 1] --> item[1] 表示第i个类中心的编号
+                rho_cluster_i = np.zeros(self.ND)
+                index_cluster_i = np.where(clusterInd == (item_cent[1] + 1))[0]  # centInd[i, 1] --> item[1] 表示第i个类中心的编号
+                clump_rho = rho[index_cluster_i]
+                rho_max_min = clump_rho.max() - clump_rho.min()
+                Gradient_ = self.Gradient.copy()
+                grad_clump_i = Gradient_ / rho_max_min
+                mask_grad = np.where(grad_clump_i > self.para.gradmin)[0]
+                index_cc = np.intersect1d(mask_grad, index_cluster_i)
+                rho_cluster_i[index_cluster_i] = rho[index_cluster_i]
+                rho_cc_mean = rho[index_cc].mean()
+                index_cc_rho = np.where(rho_cluster_i > rho_cc_mean)[0]
+                index_cluster_rho = np.union1d(index_cc, index_cc_rho)
+
+                cl_i_index_xx = self.xx[index_cluster_rho, :] - 1  # -1 是为了在data里面用索引取值(从0开始)
+                # clusterInd  标记的点的编号是从1开始，  没有标记的点的编号为-1
+                # clustNum = cl_i_index_xx.shape[0]
+
+                cl_i = np.zeros(data.shape, np.int64)
+                index_cc_rho = np.where(rho_cluster_i > rho_cc_mean)[0]
+                index_clust_rho = np.union1d(index_cc, index_cc_rho)
+
+                cl_i_index_xx = self.xx[index_clust_rho, :] - 1  # -1 是为了在data里面用索引取值(从0开始)
+                # clustInd  标记的点的编号是从1开始，  没有标记的点的编号为-1
+                for j, item in enumerate(cl_i_index_xx):
+                    cl_i[item[1], item[0]] = 1
+                # 形态学处理
+                L = ndimage.binary_fill_holes(cl_i).astype(np.int64)
+                L = measure.label(L)  # Labeled input image. Labels with value 0 are ignored.
+                STATS = measure.regionprops(L)
+
+                Ar_sum = []
+                for region in STATS:
+                    coords = region.coords  # 经过验证，坐标原点为0
+                    coords = coords[:, [1, 0]]
+                    temp = 0
+                    for j, item in enumerate(coords):
+                        temp += data[item[1], item[0]]
+                    Ar_sum.append(temp)
+                Ar = np.array(Ar_sum)
+                ind = np.where(Ar == Ar.max())[0]
+                L[L != ind[0] + 1] = 0
+                cl_i = L / (ind[0] + 1)
+                coords = STATS[ind[0]].coords  # 最大的连通域对应的坐标
+
+                clustNum = coords.shape[0]
+
+                if clustNum > self.para.v_min:
+                    coords = coords[:, [1, 0]]
+                    clump_i_ = np.zeros(coords.shape[0])
+                    for j, item in enumerate(coords):
+                        clump_i_[j] = data[item[1], item[0]]
+
+                    clustsum = sum(clump_i_) + 0.0001  # 加一个0.0001 防止分母为0
+                    clump_Cen[clump_ii, :] = np.matmul(clump_i_, coords) / clustsum
+                    clump_volume[clump_ii, 0] = clustNum
+                    clump_sum[clump_ii, 0] = clustsum
+
+                    x_i = coords - clump_Cen[clump_ii, :]
+                    clump_size[clump_ii, :] = 2.3548 * np.sqrt((np.matmul(clump_i_, x_i ** 2) / clustsum)
+                                                               - (np.matmul(clump_i_, x_i) / clustsum) ** 2)
+                    clump_i = data * cl_i
+                    # out = out + clump_i
+                    mask = mask + cl_i * (clump_ii + 1)
+                    clump_peak[clump_ii, 0] = clump_i.max()
+                    clump_Peak[clump_ii, [1, 0]] = np.argwhere(clump_i == clump_i.max())[0]
+                    clump_ii += 1
+                else:
+                    pass
+
+        clump_Peak = clump_Peak + 1
+        clump_Cen = clump_Cen + 1  # python坐标原点是从0开始的，在这里整体加1，改为以1为坐标原点
+        id_clumps = np.array([item + 1 for item in range(n_clump)], np.int64).T
+        id_clumps = id_clumps.reshape([n_clump, 1])
+
+        LDC_outcat = np.column_stack(
+            (id_clumps, clump_Peak, clump_Cen, clump_size, clump_peak, clump_sum, clump_volume))
+        LDC_outcat = LDC_outcat[:clump_ii, :]
+        if dim == 3:
+            table_title = ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'Peak',
+                           'Sum', 'Volume']
+        else:
+            table_title = ['ID', 'Peak1', 'Peak2', 'Cen1', 'Cen2', 'Size1', 'Size2', 'Peak', 'Sum', 'Volume']
+
+        LDC_outcat = pd.DataFrame(LDC_outcat, columns=table_title)
+        self.result.detect_num[0] = LDC_outcat.shape[0]
+        if self.para.touch:
+            LDC_outcat = self.touch_edge(LDC_outcat)
+            self.result.detect_num[1] = LDC_outcat.shape[0]
+
+        loc_LDC_outcat = self.get_outcat_local(LDC_outcat)
+        self.result.detect_num[2] = loc_LDC_outcat.shape[0]
+        return loc_LDC_outcat, LDC_outcat, mask
 
     def change_pix2world(self, outcat):
         """
