@@ -5,8 +5,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import shutil
 from astropy.coordinates import SkyCoord
-from DensityClust.localDenClust2 import DetectResult, Data
+from DensityClust.localDenClust2 import Data
 from DensityClust.localDenClust2 import LocalDensityCluster as LDC
+import threading
 
 
 def make_plot_wcs_1(outcat_wcs, data_wcs, data_cube):
@@ -49,6 +50,28 @@ def make_plot_wcs_1(outcat_wcs, data_wcs, data_cube):
     plt.show()
 
 
+def show_outcat_data(data_name, outcat_name):
+    """
+    将核表中的质心点在云核数据的银经银纬积分图上绘制
+    :param data_name: 原始数据文件
+    :param outcat_name 云核核表数据,可以是像素坐标也可以是wcs坐标
+
+     data_name = r'F:\Parameter_reduction\LDC\0170+010_L\0170+010_L.fits'
+     outcat_name = r'F:\Parameter_reduction\LDC\0170+010_L\LDC_auto_loc_outcat.csv'
+    """
+    data = Data(data_name)
+    outcat = pd.read_csv(outcat_name, sep=',')
+    if 'Cen1' in outcat.keys():
+        ldc = LDC(data=data, para=None)
+        outcat_wcs = ldc.change_pix2world(outcat)
+    else:
+        outcat_wcs = outcat
+
+    data_wcs = data.wcs
+    data_cube = data.data_cube
+    make_plot_wcs_1(outcat_wcs, data_wcs, data_cube)
+
+
 def create_folder(path):
     """
     创建文件夹
@@ -61,15 +84,16 @@ def create_folder(path):
     return path
 
 
-def get_save_clumps_xyv(origin_data_name, mask_name, outcat_name, save_path):
+def get_save_clumps_xyv(origin_data_name, mask_name, outcat_name, save_path, thresh_num=4):
     """
     将云核的坐标及对应的强度整理保存为.csv文件
     :param origin_data_name: 原始数据
     :param mask_name: 检测得到的掩模
     :param outcat_name: 检测得到的核表
     :param save_path: 坐标保存的文件夹
+    :param thresh_num: 执行过程中的多线程个数, 默认为4个线程
     :return:
-        DataFarame [ x_2, y_1 , v_0, Intensity]
+        None
     """
     create_folder(save_path)
 
@@ -85,7 +109,39 @@ def get_save_clumps_xyv(origin_data_name, mask_name, outcat_name, save_path):
     mask_flatten = mask.flatten()
     Y = data.flatten()
     clumps_id = f_outcat['ID'].values.astype(np.int64)
-    for id_clumps_item in clumps_id:
+
+    tsk = []
+    deal_num = clumps_id.shape[0] // thresh_num
+    for thre_i in range(thresh_num):
+        st = thre_i * deal_num
+        end_ = (thre_i + 1) * deal_num
+
+        if thre_i == thresh_num - 1:
+            end_ = clumps_id.shape[0]
+        clumps_id_st_end_ = clumps_id[st: end_]
+        t1 = threading.Thread(target=save_point_csv,
+                              args=(save_path, mask_flatten, Y, X, clumps_id_st_end_))
+        tsk.append(t1)
+
+    for t in tsk:
+        t.start()
+    for t in tsk:
+        t.join()
+
+
+def save_point_csv(save_path, mask_flatten, Y, X, clumps_id_st_end_):
+    """
+    将指定的云核的坐标及对应的强度整理保存为.csv文件，多线程会调用
+
+    :param save_path: 坐标文件保存的文件夹
+    :param mask_flatten: 检测得到的掩模数据拉直后的结果
+    :param Y: 原始数据强度值拉直后的结果
+    :param X: 原始数据的坐标
+    :param clumps_id_st_end_: 要执行的云核ID号的起始编号
+    :return:
+        None
+    """
+    for id_clumps_item in clumps_id_st_end_:
         clump_item_name = os.path.join(save_path, 'clump_id_xyz_intensity_%04d.csv' % id_clumps_item)
         if os.path.exists(clump_item_name):
             continue
@@ -100,7 +156,7 @@ def get_save_clumps_xyv(origin_data_name, mask_name, outcat_name, save_path):
 
 def get_data_points(points_all_df):
     """
-
+    利用云核坐标点及强度的csv文件数据，将数据重构成局部data_cube
     :param points_all_df: [x,y,v,I]
     :return: data_cube
     """
@@ -118,7 +174,7 @@ def get_data_points(points_all_df):
 
 def get_datacube_by_points(points_name_list):
     """
-    根据云核的点和强度，返回局部立方体
+    根据云核的点和强度，返回局部立方体, 可将多个云核拼接成一个局部的data_cube，主要用于显示相互重叠的云核
     :param points_name: 云核点坐标及强度文件名列表
     :return:
         np.array (n*m*k)
@@ -133,26 +189,25 @@ def get_datacube_by_points(points_name_list):
 
 
 def get_points_by_clumps_id(clumps_id, points_path):
+    """
+    根据给定的云核id,将这些云核的坐标及强度返回
+    :param clumps_id 云核的id [1,2,3]
+    :param points_path 保存csv的路径
+    """
     points_all_df = pd.DataFrame([])
 
     for id_clumps_index in clumps_id:
         clump_id_path = os.path.join(points_path, 'clump_id_xyz_intensity_%04d.csv' % id_clumps_index)
         xyv_intensity = pd.read_csv(clump_id_path)
         points_all_df = pd.concat([points_all_df, xyv_intensity], axis=0)
-
+    points_all_df = points_all_df.dropna()   # 删除存在nan的行数据
     return points_all_df
 
 
-def data_points_prepare():
-    origin_data_name = r'0170+010_L\0170+010_L.fits'
-    mask_name = r'0170+010_L\LDC_auto_mask.fits'
-    outcat_name = r'0170+010_L\LDC_auto_outcat.csv'
-    save_path = r'0170+010_L\0170+010_L_all_points'
-    create_folder(save_path)
-    get_save_clumps_xyv(origin_data_name, mask_name, outcat_name, save_path)
-
-
 def move_csv_png(csv_png_folder):
+    """
+    对MGM拟合的结果进行整理
+    """
     csv_path = [os.path.join(csv_png_folder, item) for item in os.listdir(csv_png_folder) if item.endswith('.csv')]
     png_path = [os.path.join(csv_png_folder, item) for item in os.listdir(csv_png_folder) if item.endswith('.png')]
     csv_folder = os.path.join(csv_png_folder, 'csv')
@@ -172,6 +227,9 @@ def move_csv_png(csv_png_folder):
 
 
 def restruct_fitting_outcat(csv_png_folder, fitting_outcat_path=None):
+    """
+    将所有拟合结果拼接成一个核表,并根据ID排序
+    """
     csv_folder = os.path.join(csv_png_folder, 'csv')
     csv_path_ob = [os.path.join(csv_folder, item) for item in os.listdir(csv_folder) if item[-7:-4].isalnum()]
     outcat_df = pd.DataFrame([])
@@ -189,30 +247,6 @@ def restruct_fitting_outcat(csv_png_folder, fitting_outcat_path=None):
     return fitting_outcat_path
 
 
-def pix2wcs_show_result():
-    origin_data_name = r'F:\Parameter_reduction\LDC\0170+010_L\0170+010_L.fits'
-    mask_name = r'0170+010_L\LDC_auto_mask.fits'
-    outcat_name = r'F:\Parameter_reduction\LDC\0170+010_L\LDC_auto_loc_outcat_fitting\fitting_outcat.csv'
-    outcat_name_1 = r'F:\Parameter_reduction\LDC\0170+010_L\LDC_auto_loc_outcat_wcs.csv'
-    save_path = r'0170+010_L\0170+010_L_all_points'
-
-    data = Data(origin_data_name)
-    ldc = LDC(data=data,para=None)
-    ldc.result.outcat = pd.read_csv(outcat_name_1, sep='\t')
-    outcat = ldc.result.outcat
-    outcat_new = outcat[['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1',
-       'Size2', 'Size3', 'Peak', 'Sum']]
-    outcat_new['Volume'] = outcat['cost']
-    ldc.result.outcat_wcs = ldc.change_pix2world(outcat_new)
-    # ldc.result.data.get_wcs()
-    # detect_result = DetectResult()
-    # detect_result.outcat_wcs = ldc.result.outcat_wcs
-    data_wcs = data.wcs
-    data_cube = data.data_cube
-    outcat_wcs = ldc.result.outcat_wcs
-    make_plot_wcs_1(outcat_wcs, data_wcs, data_cube)
-
-
 def display_data(data):
     if data.ndim == 3:
         fig = plt.figure(figsize=(15, 8))
@@ -220,9 +254,9 @@ def display_data(data):
         ax1 = fig.add_subplot(1, 3, 1)
         ax2 = fig.add_subplot(1, 3, 2)
         ax3 = fig.add_subplot(1, 3, 3)
-        im0 = ax1.imshow(data.sum(0), origin='lower')  # x银纬,y银经
-        im1 = ax2.imshow(data.sum(1), origin='lower')  # x银纬，y速度
-        im2 = ax3.imshow(data.sum(2), origin='lower')  # x银经，y速度
+        ax1.imshow(data.sum(0), origin='lower')  # x银纬,y银经
+        ax2.imshow(data.sum(1), origin='lower')  # x银纬，y速度
+        ax3.imshow(data.sum(2), origin='lower')  # x银经，y速度
         plt.show()
         return fig, (ax1, ax2, ax3)
 
