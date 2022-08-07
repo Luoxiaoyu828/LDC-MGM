@@ -3,14 +3,16 @@ import os
 import time
 import pandas as pd
 from tqdm import tqdm
+import threading
 from fit_clump_function import multi_gauss_fitting_new, touch_clump
 from tools.ultil_lxy import create_folder, get_points_by_clumps_id, move_csv_png, restruct_fitting_outcat,\
     get_save_clumps_xyv
-from tools.show_clumps import display_clumps_fitting
+from tools import show_clumps
 from DensityClust.localDenClust2 import Data
 
 
-def fitting_LDC_clumps(points_path, outcat_name, data_rms, save_png=False, ldc_mgm_path=None, fitting_outcat_path=None):
+def fitting_LDC_clumps(points_path, outcat_name, data_rms, thresh_num, save_png=False, ldc_mgm_path=None,
+                       fitting_outcat_path=None):
     """
     对LDC的检测结果进行3维高斯拟合，保存分子云核的参数
     拟合核表 DataFrame格式
@@ -42,7 +44,7 @@ def fitting_LDC_clumps(points_path, outcat_name, data_rms, save_png=False, ldc_m
         create_folder(outcat_name.replace('.csv', '_fitting'))
 
     # 得到相互重叠的云核(ID)
-    touch_clump_record, _ = touch_clump.connect_clump_new(f_outcat, mult=0.9)
+    touch_clump_record = touch_clump.connect_clump_new(f_outcat, mult=0.8)
     print('Fitting process:', file=file)
     print('The overlapping clumps are selected.', file=file)
 
@@ -51,14 +53,62 @@ def fitting_LDC_clumps(points_path, outcat_name, data_rms, save_png=False, ldc_m
                                 f_outcat['Size3'] / fwhm_sigma]).T
     params_init_all[:, 5] = 0  # 初始化的角度
     print('The initial parameters (Initial guess) have finished.', file=file)
-    touch_record_i = 0
+    if thresh_num > 1:
+        clump_num = f_outcat.shape[0]
+        tsk = []
+        touch_num = len(touch_clump_record)
+        deal_num = clump_num // thresh_num
+        st = 0
+        for thre_i in range(thresh_num):
+            temp_num = 0
+            for item_i, item in enumerate(touch_clump_record[st:]):
+                temp_num += item.shape[0]
+
+                if thre_i == thresh_num - 1:
+                    end_ = touch_num
+                if temp_num > deal_num:
+                    end_ = item_i + 1 + st
+                    break
+
+            touch_i = st
+            if thre_i == thresh_num - 1:
+                end_ = len(touch_clump_record)
+            touch_clump_record_ = touch_clump_record[st: end_]
+            t1 = threading.Thread(target=fitting_threading,
+                                  args=(touch_clump_record_, ldc_mgm_path, file, points_path, params_init_all, data_rms,
+                                        save_png, f_outcat, touch_i))
+            tsk.append(t1)
+            st = end_
+
+        for t in tsk:
+            t.start()
+        for t in tsk:
+            t.join()
+    elif thresh_num == 1:
+        touch_i = 0
+        fitting_threading(touch_clump_record, ldc_mgm_path, file, points_path, params_init_all, data_rms, save_png,
+                          f_outcat, touch_i)
+
+    print('=' * 20 + '\n', file=file)
+    move_csv_png(ldc_mgm_path)
+    fitting_outcat_path = restruct_fitting_outcat(ldc_mgm_path, fitting_outcat_path)
+    # 将分开拟合的核表整合在一起，保存在ldc_mgm_path下，命名为fitting_outcat.csv
+    time_end = time.time()
+    print('Fitting information:\nFitting clumps used %.2f seconds.' % (time_end - time_st), file=file)
+    file.close()
+    return fitting_outcat_path
+
+
+def fitting_threading(touch_clump_record, ldc_mgm_path, file, points_path, params_init_all, data_rms, save_png,
+                          f_outcat, touch_i_):
+    touch_i = touch_i_
     for item_tcr in tqdm(touch_clump_record):
 
-        fit_outcat_name = os.path.join(ldc_mgm_path, 'fit_item%03d.csv' % touch_record_i)
-        fig_name = os.path.join(ldc_mgm_path, 'touch_clumps_%03d.png' % touch_record_i)
+        fit_outcat_name = os.path.join(ldc_mgm_path, 'fit_item%03d.csv' % touch_i)
+        fig_name = os.path.join(ldc_mgm_path, 'touch_clumps_%03d.png' % touch_i)
         print(time.ctime() + '-->touch_clump %d/%d have %d clump[s].' % (
-                touch_record_i, len(touch_clump_record), len(item_tcr)), file=file)
-        touch_record_i += 1
+            touch_i, len(touch_clump_record), len(item_tcr)), file=file)
+        touch_i += 1
         clumps_id = f_outcat.iloc[item_tcr - 1]['ID'].values.astype(np.int64)
 
         points_all_df = get_points_by_clumps_id(clumps_id, points_path)
@@ -73,20 +123,10 @@ def fitting_LDC_clumps(points_path, outcat_name, data_rms, save_png=False, ldc_m
         if save_png:
             pif_1 = outcat_fitting[['Cen1', 'Cen2', 'Cen3']] - points_all_df[['x_2', 'y_1', 'v_0']].values.min(axis=0)
             df_temp_1 = f_outcat.iloc[item_tcr - 1]
-            display_clumps_fitting(pif_1, df_temp_1, points_all_df, fig_name)
-
-    print('=' * 20 + '\n', file=file)
-    move_csv_png(ldc_mgm_path)
-    fitting_outcat_path = restruct_fitting_outcat(ldc_mgm_path, fitting_outcat_path)
-    # 将分开拟合的核表整合在一起，保存在ldc_mgm_path下，命名为fitting_outcat.csv
-    time_end = time.time()
-
-    print('Fitting information:\nFitting clumps used %.2f seconds.' % (time_end - time_st), file=file)
-    file.close()
-    return fitting_outcat_path
+            show_clumps.display_clumps_fitting(pif_1, df_temp_1, points_all_df, fig_name)
 
 
-def MGM_main(outcat_name_pix, origin_name, mask_name, save_path, save_png=False):
+def MGM_main(outcat_name_pix, origin_name, mask_name, save_path, thresh_num=6, save_png=False):
     """
     outcat_name_loc: LDC 检测像素核表
     origin_name: 检测的原始数据
@@ -115,7 +155,7 @@ def MGM_main(outcat_name_pix, origin_name, mask_name, save_path, save_png=False)
     # step 2: 进行拟合并保存拟合像素级核表
     data_int = Data(origin_name)
     data_rms = data_int.rms
-    fitting_outcat_path = fitting_LDC_clumps(points_path, outcat_name_pix, data_rms, save_png, ldc_mgm_path)
+    fitting_outcat_path = fitting_LDC_clumps(points_path, outcat_name_pix, data_rms, thresh_num, save_png, ldc_mgm_path)
 
     # step 3: 将拟合核表整理成最终核表并保存
     data_int.get_wcs()
@@ -132,6 +172,9 @@ def MGM_main(outcat_name_pix, origin_name, mask_name, save_path, save_png=False)
     if os.path.exists(MWISP_outcat_path):
         os.remove(MWISP_outcat_path)
     MWISP_outcat.to_csv(MWISP_outcat_path, sep='\t', index=False)
+
+    fig_name_fit = os.path.join(save_path, 'LDC_auto_detect_result_fit.png')
+    show_clumps.make_plot_wcs_1(MWISP_outcat, data_wcs, data_int.data_cube, fig_name=fig_name_fit)
 
 
 if __name__ == '__main__':
