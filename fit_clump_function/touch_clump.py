@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 from scipy.sparse.csgraph import connected_components
-from scipy.sparse import csr_matrix
+from scipy.spatial.distance import pdist, squareform
+from scipy.sparse import csr_matrix, triu
 """
 % 判断两个云核是否重叠，返回1或者0
 % mult表示倍数
@@ -158,17 +159,17 @@ def connect_clump_new(outcat, mult=1.0):
             第i个云核及与其直接重叠的核的ID
     """
 
-    outcat_num = outcat.shape[0]
-    touch_mat = np.zeros([outcat_num, outcat_num], np.int64)
+    touch_mat = touch_clump(outcat, mult)
 
-    for i in range(outcat_num):
-        outcat_i = outcat.iloc[i]
-        for j in range(i+1, outcat_num):
-            outcat_j = outcat.iloc[j]
-            touch_, distance_cen, distance_size = touch_clump_new(outcat_i, outcat_j, mult)
-            if touch_:
-                # print(distance_cen, distance_size)
-                touch_mat[i, j] = 1
+    # for i in range(outcat_num):
+    #     outcat_i = outcat.iloc[i]
+    #     for j in range(i+1, outcat_num):
+    #         outcat_j = outcat.iloc[j]
+    #         touch_, distance_cen, distance_size = touch_clump_new(outcat_i, outcat_j, mult)
+    #         if touch_:
+    #             # print(distance_cen, distance_size)
+    #             touch_mat[i, j] = 1
+
     # 计算邻接矩阵
     # touch_mat = touch_mat + touch_mat.T
     newarr = csr_matrix(touch_mat)
@@ -179,17 +180,17 @@ def connect_clump_new(outcat, mult=1.0):
         idx = np.where(labels == i)[0]
         touch_all.append(idx + 1)  # 云核的编号从1开始
 
-    touch_all_direct = []
-    for i in range(outcat_num):
-        touch_i = np.array([], np.int64)
-        touch_i = np.append(touch_i, i + 1)
-        touch_mat_i = touch_mat[i, :]
-        idx = np.where(touch_mat_i == 1)[0]
-        if idx.shape[0] > 0:
-            touch_i = np.append(touch_i, idx + 1)
-        touch_all_direct.append(touch_i)
+    # touch_all_direct = []
+    # for i in range(outcat_num):
+    #     touch_i = np.array([], np.int64)
+    #     touch_i = np.append(touch_i, i + 1)
+    #     touch_mat_i = touch_mat[i, :]
+    #     idx = np.where(touch_mat_i == 1)[0]
+    #     if idx.shape[0] > 0:
+    #         touch_i = np.append(touch_i, idx + 1)
+    #     touch_all_direct.append(touch_i)
 
-    return touch_all, touch_all_direct
+    return touch_all
 
 
 def touch_clump_new(outcat_i, outcat_j, mult):
@@ -244,6 +245,59 @@ def touch_clump_new(outcat_i, outcat_j, mult):
             touch_ = 1
 
     return touch_, distance_cen, distance_size
+
+
+def touch_clump_matrix(f_cen, f_size,  mult):
+    axis_size = 2.3548  # 将 FWHM 转换成 sigma
+
+    dis_cen = pdist(f_cen, metric='euclidean')
+    dis_cen_m = squareform(dis_cen)
+    dis_cen_m = np.triu(dis_cen_m)
+
+    f_size_2 = (((f_size/axis_size)**2).sum(axis=1))**0.5
+    dis_size_m = np.zeros(dis_cen_m.shape)
+
+    for i in range(f_cen.shape[0]):
+        dis_size_m[i, i+1:] = f_size_2[i] + f_size_2[i + 1:]
+
+    matrx_bool_int = (dis_size_m * mult > dis_cen_m).astype(np.int32)    # 重叠的情况
+    return matrx_bool_int
+
+
+def touch_clump_matrix_v(f_cen_v, f_size_v,  mult):
+    axis_size = 2.3548  # 将 FWHM 转换成 sigma
+
+    f_size_v = f_size_v / axis_size
+    dis_cen = pdist(f_cen_v, metric='euclidean')
+    dis_cen_m = squareform(dis_cen)
+    dis_cen_m = np.triu(dis_cen_m)
+
+    dis_size_m = np.zeros(dis_cen_m.shape)
+    for i in range(f_cen_v.shape[0]):
+        dis_size_m[i, i+1:] = f_size_v[i, 0] + f_size_v[i + 1:, 0]
+
+    matrx_bool_int = (dis_size_m * mult > dis_cen_m).astype(np.int32)    # 重叠的情况
+    return matrx_bool_int
+
+
+def touch_clump(outcat, mult):
+    if 'Cen3' in outcat.keys():
+        f_cen = outcat[['Cen1', 'Cen2']].values
+        f_size = outcat[['Size1', 'Size2']].values
+        matrx_bool_int_c = touch_clump_matrix(f_cen, f_size, mult)
+
+        f_cen_v = outcat[['Cen3']].values
+        f_size_v = outcat[['Size3']].values
+        matrx_bool_int_v = touch_clump_matrix_v(f_cen_v, f_size_v, mult)
+
+        matrx_bool_int = ((matrx_bool_int_c * matrx_bool_int_v) > 0).astype(np.int32)
+        touch_mat = matrx_bool_int
+    else:
+        f_cen = outcat[['Cen1', 'Cen2']].values
+        f_size = outcat[['Size1', 'Size2']].values
+        matrx_bool_int_c = touch_clump_matrix(f_cen, f_size, mult)
+        touch_mat = matrx_bool_int_c
+    return touch_mat
 
 
 if __name__ == '__main__':
