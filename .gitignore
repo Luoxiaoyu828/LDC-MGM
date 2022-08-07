@@ -18,14 +18,18 @@ temp_ldc_400_449.py
 temp_ldc_450_799_pool.py
 temp_ldc.py
 temp_ldc_mgm.py
+temp_ldc_200_500.py
+temp_ldc_500_700.py
+temp_ldc_700_1000.py
+temp_ldc_mgm_200.py
+temp_mgm_200.py
+temp_mmm.py
 =======
 tttt.py
 >>>>>>> 60c5b86da81f699f019c313eeae816b99d496eba
 
-requirements.txt
 setup.py
 README.MD
 fit_simulate_data.py
-/fit_clump_function/fitting_result/
 /0170+010_L/MGM_problem_cell/
 /other/
