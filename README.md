@@ -86,3 +86,8 @@ compare_version(sop, dop, msp)函数 用于匹配两个核表及对应的云核�
 
 1.2.8--1.2.9
 优化了计算核表的代码，将原来一个一个的计算改为把mask计算好了，利用mask结合原始数据计算核表。
+
+1.2.9-->1.2.10
+MGM过程中,会有一些点的强度为nan，导致拟合失败，已解决：
+ultil_lxy.py 167:points_all_df = points_all_df.dropna()   # 删除存在nan的行数据
+MGM执行完毕后，在积分图上绘制拟合过后的质心
