@@ -14,9 +14,11 @@ from DensityClust.clustring_subfunc import \
 from DensityClust.clustring_subfunc import assignation, divide_boundary_by_grad
 from Generate.fits_header import Header
 
+
 """
-对1.2.8版本中，计算核表进行改进,先生成mask再基于mask计算核表。
+对1.2.8版本中，计算核表进行改进,先生成mask再基于mask计算核表-->1.2.9。
 """
+
 
 class Data:
     def __init__(self, data_path=''):
@@ -57,11 +59,6 @@ class Data:
          This functions finds an estimate of the RMS noise in the supplied data data_cube.
         :return: bkgrms_value
         """
-        # sigma_clip = SigmaClip(sigma=3.0)
-        # bkgrms = StdBackgroundRMS(sigma_clip)
-        # data = self.data_cube
-        # bkgrms_value = bkgrms.calc_background_rms(data)
-        # self.rms_ = bkgrms_value
         if self.exist_file:
             data_header = self.data_header
             keys = data_header.keys()
