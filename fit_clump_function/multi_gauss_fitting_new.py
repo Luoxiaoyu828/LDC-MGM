@@ -337,6 +337,7 @@ def get_fit_outcat_df(params_fit_pf, data_rms):
     for i, item in enumerate(params_fit_pf.values):
         pfsc = item[: p_num]
         pfsc_1 = params_fit_pf.iloc[i]
+        pfsc[5] = 0  # 旋转角设为0
         func = get_multi_gauss_func_by_params(pfsc, ndim=n_dim_)
 
         if case_3d:
