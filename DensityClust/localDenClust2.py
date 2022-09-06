@@ -669,16 +669,26 @@ class LocalDensityCluster:
             max_idx = np.argwhere(image_intensity[ps_i] == item)[0]
             peak123 = max_idx + bbox[:, ps_i]
             Peak123[:, ps_i] = peak123.T
-
-        clump_Cen = np.array([props['weighted_centroid-2'], props['weighted_centroid-1'], props['weighted_centroid-0']])
-        size_3 = (props['weighted_moments_central-0-0-2'] / props['weighted_moments_central-0-0-0']) ** 0.5
-        size_2 = (props['weighted_moments_central-0-2-0'] / props['weighted_moments_central-0-0-0']) ** 0.5
-        size_1 = (props['weighted_moments_central-2-0-0'] / props['weighted_moments_central-0-0-0']) ** 0.5
+        if dim == 3:
+            clump_Cen = np.array([props['weighted_centroid-2'], props['weighted_centroid-1'], props['weighted_centroid-0']])
+            size_3 = (props['weighted_moments_central-0-0-2'] / props['weighted_moments_central-0-0-0']) ** 0.5
+            size_2 = (props['weighted_moments_central-0-2-0'] / props['weighted_moments_central-0-0-0']) ** 0.5
+            size_1 = (props['weighted_moments_central-2-0-0'] / props['weighted_moments_central-0-0-0']) ** 0.5
+            clump_Size = 2.3548 * np.array([size_3, size_2, size_1])
+        elif dim == 2:
+            clump_Cen = np.array(
+                [props['weighted_centroid-1'], props['weighted_centroid-0']])
+            size_2 = (props['weighted_moments_central-0-2'] / props['weighted_moments_central-0-0']) ** 0.5
+            size_1 = (props['weighted_moments_central-2-0'] / props['weighted_moments_central-0-0']) ** 0.5
+            clump_Size = 2.3548 * np.array([size_2, size_1])
+        else:
+            clump_Cen = None
+            clump_Size = None
+            print('Only 2D and 3D are supported!')
 
         clump_Volume = props['area']
         clump_Peak = props['max_intensity']
         clump_Sum = clump_Volume * props['mean_intensity']
-        clump_Size = 2.3548 * np.array([size_3, size_2, size_1])
         clump_Peak123 = Peak123 + 1
         clump_Cen = clump_Cen + 1  # python坐标原点是从0开始的，在这里整体加1，改为以1为坐标原点
         id_clumps = np.array([item + 1 for item in range(label_data.max())], np.int32).T
@@ -832,22 +842,36 @@ class LocalDensityCluster:
         :param outcat: LDC outcat_record
         :return:
         """
-        size_x, size_y, size_v = self.data.data_cube.shape
-        # outcat_record = pd.read_csv(txt_name, sep='\t')
-        cen1_min = 30
-        cen1_max = size_v - 30 - 1
-        cen2_min = 30
-        cen2_max = size_y - 30 - 1
-        cen3_min = 60
-        cen3_max = size_x - 60 - 1
-        aa = outcat.loc[outcat['Cen1'] > cen1_min]
-        aa = aa.loc[outcat['Cen1'] <= cen1_max]
+        if self.data.n_dim == 3:
+            size_x, size_y, size_v = self.data.data_cube.shape
+            # outcat_record = pd.read_csv(txt_name, sep='\t')
+            cen1_min = 30
+            cen1_max = size_v - 30 - 1
+            cen2_min = 30
+            cen2_max = size_y - 30 - 1
+            cen3_min = 60
+            cen3_max = size_x - 60 - 1
+            aa = outcat.loc[outcat['Cen1'] > cen1_min]
+            aa = aa.loc[outcat['Cen1'] <= cen1_max]
 
-        aa = aa.loc[outcat['Cen3'] > cen3_min]
-        aa = aa.loc[outcat['Cen3'] <= cen3_max]
+            aa = aa.loc[outcat['Cen3'] > cen3_min]
+            aa = aa.loc[outcat['Cen3'] <= cen3_max]
 
-        aa = aa.loc[outcat['Cen2'] > cen2_min]
-        loc_outcat = aa.loc[outcat['Cen2'] <= cen2_max]
+            aa = aa.loc[outcat['Cen2'] > cen2_min]
+            loc_outcat = aa.loc[outcat['Cen2'] <= cen2_max]
+        else:
+            size_x, size_y = self.data.data_cube.shape
+            # outcat_record = pd.read_csv(txt_name, sep='\t')
+            cen1_min = 30
+            cen1_max = size_x - 30 - 1
+            cen2_min = 30
+            cen2_max = size_y - 30 - 1
+
+            aa = outcat.loc[outcat['Cen1'] > cen1_min]
+            aa = aa.loc[outcat['Cen1'] <= cen1_max]
+
+            aa = aa.loc[outcat['Cen2'] > cen2_min]
+            loc_outcat = aa.loc[outcat['Cen2'] <= cen2_max]
         return loc_outcat
 
     def get_para_inf(self):
