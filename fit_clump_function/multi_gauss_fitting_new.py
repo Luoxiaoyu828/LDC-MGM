@@ -43,8 +43,6 @@ def get_params_bound(params_init, ndim=3, peak_range=3, peak_low=3 * 0.23, sigma
     :return:
     """
 
-    low_ = []
-    up_ = []
     if ndim == 2:
         param_num = 6
         gauss_num = params_init.shape[0] // param_num
@@ -67,17 +65,19 @@ def get_params_bound(params_init, ndim=3, peak_range=3, peak_low=3 * 0.23, sigma
         y0_down = y0 - sigma_time * s0_2
         y0_up = y0 + sigma_time * s0_2
 
-        s0_1_down = np.array([s0_1 * s_time, s_low * np.ones_like(s0_1)]).max(axis=0)
-        s0_1_up = s0_1 * (s_time - 1)
+        s0_1_down = np.array([s0_1 * (s_time - 1), s_low * np.ones_like(s0_1)]).min(axis=0)
+        s0_1_up = s0_1 * s_time
 
-        s0_2_down = np.array([s0_2 * s_time, s_low * np.ones_like(s0_2)]).max(axis=0)
-        s0_2_up = s0_2 * (s_time - 1)
+        s0_2_down = np.array([s0_2 * (s_time - 1), s_low * np.ones_like(s0_2)]).min(axis=0)
+        s0_2_up = s0_2 * s_time
 
         theta_0_down = np.zeros_like(theta_0)
         theta_0_up = np.zeros_like(theta_0) + 2 * np.pi
+        low_array = np.array([A0_down, x0_down, y0_down, s0_1_down, s0_2_down, theta_0_down]).T
+        up_array = np.array([A0_up, x0_up, y0_up, s0_1_up, s0_2_up, theta_0_up]).T
 
-        low_.extend([A0_down, x0_down, y0_down, s0_1_down, s0_2_down, theta_0_down])
-        up_.extend([A0_up, x0_up, y0_up, s0_1_up, s0_2_up, theta_0_up])
+        low_ = low_array.flatten()
+        up_ = up_array.flatten()
     elif ndim == 3:
         param_num = 8
         gauss_num = params_init.shape[0] // param_num
@@ -152,19 +152,23 @@ def get_multi_gauss_func_by_params(params_init, ndim=3):
         param_num = 6  # 一个2d高斯成分的参数个数 (A0, x0, y0, s0_1,s0_2, theta_0)
         gauss_str = gauss_2d_str
         paras = paras[:2]
+        gauss_i_num = 17
     elif ndim == 3:
         param_num = 8  # 一个3d高斯成分的参数个数 (A0, x0, y0, s0_1,s0_2, theta_0, v0, s0_3)
         gauss_str = gauss_3d_str
+        gauss_i_num = 19
     else:
         print('only fitting 2d or 3d gauss!')
         raise ValueError
 
     gauss_num = params_init.shape[0] // param_num  # 高斯成分的个数
     express1 = ''
+
     for gauss_i in range(gauss_num):
-        temp = gauss_str % (
-            gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i,
-            gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i)
+        # temp = gauss_str % (
+        #     gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i,
+        #     gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i, gauss_i)
+        temp = gauss_str % tuple([gauss_i for _ in range(gauss_i_num)])
         express1 += temp
 
     express = express1[2:]
@@ -211,20 +215,18 @@ def fitting_multi_gauss_params(points_all_df, params_init, ndim=3):
         raise ValueError
     power = 4
     gauss_multi_func = get_multi_gauss_func_by_params(params_init, ndim=ndim)
-    low_ = []
-    up_ = []
     if ndim == 2:
         columns_name = ['A', 'x0', 'y0', 's1', 's2', 'Theta']
         param_num = 6
-        gauss_num = params_init.shape[0] // param_num
         X = points_all_df['x_2'].values
         Y = points_all_df['y_1'].values
         gauss_multi_value = gauss_multi_func(X, Y)
         Intensity = points_all_df['Intensity'].values
         weight = gauss_multi_value ** power / ((gauss_multi_value ** power).sum())  # 创建拟合的权重
         errorfunc = lambda p: np.ravel((get_multi_gauss_func_by_params(p, ndim=2)(X, Y) - Intensity) * weight)
-        [low_.extend([0, 20, 20, 0, 0, 0]) for _ in range(gauss_num)]
-        [up_.extend([20, 100, 100, 20, 20, 7]) for _ in range(gauss_num)]
+        low_, up_ = get_params_bound(params_init, ndim=2)
+        # [low_.extend([0, 20, 20, 0, 0, 0]) for _ in range(gauss_num)]
+        # [up_.extend([20, 100, 100, 20, 20, 7]) for _ in range(gauss_num)]
     elif ndim == 3:
         columns_name = ['A', 'x0', 'y0', 's1', 's2', 'Theta', 'v0', 's3']
         param_num = 8
@@ -345,10 +347,14 @@ def get_fit_outcat_df(params_fit_pf, data_rms):
             y_lim = [pfsc_1['y0'] - interg_rg * pfsc_1['s2'], pfsc_1['y0'] + interg_rg * pfsc_1['s2']]
             v_lim = [pfsc_1['v0'] - interg_rg * pfsc_1['s3'], pfsc_1['v0'] + interg_rg * pfsc_1['s3']]
             intergrate_bound = [x_lim, y_lim, v_lim]
+            Xin, Yin, Vin = np.mgrid[x_lim[0]: x_lim[1], y_lim[0]: y_lim[1], v_lim[0]: v_lim[1]]
+            Y = func(Xin.flatten(), Yin.flatten(), Vin.flatten())
         elif case_2d:
             x_lim = [pfsc_1['x0'] - interg_rg * pfsc_1['s1'], pfsc_1['x0'] + interg_rg * pfsc_1['s1']]
             y_lim = [pfsc_1['y0'] - interg_rg * pfsc_1['s2'], pfsc_1['y0'] + interg_rg * pfsc_1['s2']]
             intergrate_bound = [x_lim, y_lim]
+            Xin, Yin = np.mgrid[x_lim[0]: x_lim[1], y_lim[0]: y_lim[1]]
+            Y = func(Xin.flatten(), Yin.flatten())
         else:
             print('only get 2d or 3d outcat_record!')
             raise AttributeError
@@ -356,8 +362,6 @@ def get_fit_outcat_df(params_fit_pf, data_rms):
         integrate_result = integrate.nquad(func, intergrate_bound)
         clumps_sum[i, 0] = integrate_result[0]
 
-        Xin, Yin, Vin = np.mgrid[x_lim[0]: x_lim[1], y_lim[0]: y_lim[1], v_lim[0]: v_lim[1]]
-        Y = func(Xin.flatten(), Yin.flatten(), Vin.flatten())
         # Y_threshold = func(x_lim[0], pfsc_1['y0'], pfsc_1['v0'])  # 计算云核边界阈值
         Y_threshold = data_rms   # 计算云核边界阈值,以rms为界
         clump_volume = np.where(Y >= Y_threshold)[0].shape[0]
@@ -457,6 +461,11 @@ def exchange_pix2world(outcat_record, data_wcs):
         id_clumps = np.array(id_clumps)
         table_title_re = ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Size_major', 'Size_minor', 'Theta', 'Peak',
                           'Flux', 'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']
+        outcat_wcs = pd.DataFrame([], columns=table_title_re)
+        outcat_wcs[['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Size_major', 'Size_minor', 'Peak',
+                    'Flux']] = np.column_stack([id_clumps, clump_Cen, clustSize, clustPeak, clustSum])
+        outcat_wcs[['Theta', 'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']] = outcat_record[
+            ['Theta', 'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']]
 
     elif 'Cen3' in table_title:
         # 3d result
@@ -484,16 +493,15 @@ def exchange_pix2world(outcat_record, data_wcs):
         id_clumps = np.array(id_clumps)
         table_title_re = ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Velocity', 'Size_major', 'Size_minor',
                           'Size_velocity', 'Theta', 'Peak', 'Flux', 'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']
+        outcat_wcs = pd.DataFrame([], columns=table_title_re)
+        outcat_wcs[
+            ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Velocity', 'Size_major', 'Size_minor', 'Size_velocity',
+             'Peak', 'Flux']] = np.column_stack([id_clumps, clump_Cen, clustSize, clustPeak, clustSum])
+        outcat_wcs[['Theta', 'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']] = outcat_record[
+            ['Theta', 'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']]
     else:
         print('outcat_record columns name are: ' % table_title)
         raise AttributeError
-
-    outcat_wcs = pd.DataFrame([], columns=table_title_re)
-    outcat_wcs[
-        ['ID', 'Galactic_Longitude', 'Galactic_Latitude', 'Velocity', 'Size_major', 'Size_minor', 'Size_velocity',
-         'Peak', 'Flux']] = np.column_stack([id_clumps, clump_Cen, clustSize, clustPeak, clustSum])
-    outcat_wcs[['Theta', 'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']] = outcat_record[
-        ['Theta', 'Flux_SNR', 'Peak_SNR', 'Success', 'Cost']]
 
     return outcat_wcs
 

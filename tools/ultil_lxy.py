@@ -102,12 +102,21 @@ def get_save_clumps_xyv(origin_data_name, mask_name, outcat_name, save_path, thr
     f_outcat = pd.read_csv(outcat_name, sep='\t')
     if f_outcat.shape[1] == 1:
         f_outcat = pd.read_csv(outcat_name, sep=',')
-
-    [data_x, data_y, data_v] = data.shape
-    Xin, Yin, Vin = np.mgrid[1:data_x + 1, 1:data_y + 1, 1:data_v + 1]
-    X = np.vstack([Vin.flatten(), Yin.flatten(), Xin.flatten()]).T  # 坐标原点为1
     mask_flatten = mask.flatten()
+    data_dim = data.ndim
     Y = data.flatten()
+    if data_dim == 3:
+
+        [data_x, data_y, data_v] = data.shape
+        Xin, Yin, Vin = np.mgrid[1:data_x + 1, 1:data_y + 1, 1:data_v + 1]
+        X = np.vstack([Vin.flatten(), Yin.flatten(), Xin.flatten()]).T  # 坐标原点为1
+    elif data_dim == 2:
+        [data_x, data_y] = data.shape
+        Xin, Yin = np.mgrid[1:data_x + 1, 1:data_y + 1]
+        X = np.vstack([Yin.flatten(), Xin.flatten()]).T  # 坐标原点为1
+    else:
+        raise ValueError('Only 2D and 3D are supported!!!')
+
     clumps_id = f_outcat['ID'].values.astype(np.int64)
 
     tsk = []
@@ -147,8 +156,12 @@ def save_point_csv(save_path, mask_flatten, Y, X, clumps_id_st_end_):
             continue
         clump_item_df = pd.DataFrame([])
         ind = np.where(mask_flatten == id_clumps_item)[0]
-
-        clump_item_df[['x_2', 'y_1', 'v_0']] = X[ind, :]
+        if X.shape[1] == 3:
+            clump_item_df[['x_2', 'y_1', 'v_0']] = X[ind, :]
+        elif X.shape[1] == 2:
+            clump_item_df[['x_2', 'y_1']] = X[ind, :]
+        else:
+            raise ValueError('only supporting 2D or 3D')
         clump_item_df['Intensity'] = Y[ind]
 
         clump_item_df.to_csv(clump_item_name, index=False)
@@ -235,6 +248,8 @@ def restruct_fitting_outcat(csv_png_folder, fitting_outcat_path=None):
     outcat_df = pd.DataFrame([])
     for item in csv_path_ob:
         outcat_item = pd.read_csv(item, sep='\t')
+        if outcat_item.shape[1] == 1:
+            outcat_item = pd.read_csv(item, sep=',')
         outcat_df = pd.concat([outcat_df, outcat_item], axis=0)
 
     fitting_outcat = outcat_df.sort_values(by='ID')

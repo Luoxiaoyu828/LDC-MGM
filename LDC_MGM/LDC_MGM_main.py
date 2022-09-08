@@ -90,7 +90,7 @@ def LDC_MGM_split_mode(data_name, para, save_folder_all, save_loc, save_mgm_png)
     show_clumps.make_plot_wcs_1(outcat_fit_wcs_all, data_wcs, data.data_cube, fig_name=fig_name)
 
 
-def LDC_MGM_main(data_name, para, save_folder=None, split=False, save_loc=False, save_mgm_png=False):
+def LDC_MGM_main(data_name, para, save_folder=None, split=False, save_loc=False, save_mgm_png=False, thresh_num=1):
     """
     LDC_MGM算法入口，对指定的数据进行检测，将结果保存到指定位置
     data_name：数据文件[*.fits]
@@ -109,7 +109,8 @@ def LDC_MGM_main(data_name, para, save_folder=None, split=False, save_loc=False,
         ldc_cfg = localDenCluster(data_name, para, save_folder, save_loc)
         outcat_name = ldc_cfg['outcat_name']
         mask_name = ldc_cfg['mask_name']
-        mgm.MGM_main(outcat_name, data_name, mask_name, save_folder, save_mgm_png)
+
+        mgm.MGM_main(outcat_name, data_name, mask_name, save_folder, thresh_num=thresh_num, save_png=save_mgm_png)
 
 
 if __name__ == '__main__':

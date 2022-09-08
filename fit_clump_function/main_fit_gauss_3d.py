@@ -48,9 +48,14 @@ def fitting_LDC_clumps(points_path, outcat_name, data_rms, thresh_num, save_png=
     print('Fitting process:', file=file)
     print('The overlapping clumps are selected.', file=file)
 
-    params_init_all = np.array([f_outcat['Peak'], f_outcat['Cen1'], f_outcat['Cen2'], f_outcat['Size1'] / fwhm_sigma,
-                                f_outcat['Size2'] / fwhm_sigma, f_outcat['ID'], f_outcat['Cen3'],
-                                f_outcat['Size3'] / fwhm_sigma]).T
+    if 'Cen3' in f_outcat.columns:
+        params_init_all = np.array([f_outcat['Peak'], f_outcat['Cen1'], f_outcat['Cen2'], f_outcat['Size1'] / fwhm_sigma,
+                                    f_outcat['Size2'] / fwhm_sigma, f_outcat['ID'], f_outcat['Cen3'],
+                                    f_outcat['Size3'] / fwhm_sigma]).T
+    else:
+        params_init_all = np.array(
+            [f_outcat['Peak'], f_outcat['Cen1'], f_outcat['Cen2'], f_outcat['Size1'] / fwhm_sigma,
+             f_outcat['Size2'] / fwhm_sigma, f_outcat['ID']]).T
     params_init_all[:, 5] = 0  # 初始化的角度
     print('The initial parameters (Initial guess) have finished.', file=file)
     if thresh_num > 1:
@@ -109,12 +114,18 @@ def fitting_threading(touch_clump_record, ldc_mgm_path, file, points_path, param
         print(time.ctime() + '-->touch_clump %d/%d have %d clump[s].' % (
             touch_i, len(touch_clump_record), len(item_tcr)), file=file)
         touch_i += 1
+        # if touch_i < 19:
+        #     continue
+
         clumps_id = f_outcat.iloc[item_tcr - 1]['ID'].values.astype(np.int64)
 
         points_all_df = get_points_by_clumps_id(clumps_id, points_path)
         params_init = params_init_all[item_tcr - 1].flatten()
-
-        outcat_fitting = multi_gauss_fitting_new.fitting_main(points_all_df, params_init, clumps_id, data_rms)
+        if 'v_0' in points_all_df.columns:
+            ndim = 3
+        else:
+            ndim = 2
+        outcat_fitting = multi_gauss_fitting_new.fitting_main(points_all_df, params_init, clumps_id, data_rms, ndim=ndim)
         if fit_outcat_name.split('.')[-1] not in ['csv', 'txt']:
             print('the save file type must be one of *.csv and *.txt.')
         else:
