@@ -1,5 +1,4 @@
 import os
-from astropy.coordinates import SkyCoord
 from tools.show_clumps import make_plot_wcs_1
 import numpy as np
 import pandas as pd
@@ -64,13 +63,13 @@ def get_outcat_wcs_all(save_path, data_all_path):
         loc_outcat_i = get_outcat_i(outcat_i, i)
 
         origin_data_name = os.path.join(save_path, file_name + r'_%02d.fits' % i)
-        data = Data(origin_data_name)
+        data = Data(data_path=origin_data_name)
         ldc = LDC(data=data, para=None)
         outcat_wcs = ldc.change_pix2world(loc_outcat_i)
         outcat_wcs_all = pd.concat([outcat_wcs_all, outcat_wcs], axis=0)
 
     outcat_wcs_all.to_csv(outcat_wcs_path, sep='\t', index=False)
-    data = Data(data_path)
+    data = Data(data_path=data_path)
     ldc = LDC(data=data, para=None)
     data_wcs = ldc.data.wcs
     outcat_wcs_all = pd.read_csv(outcat_wcs_path, sep='\t')
@@ -87,7 +86,7 @@ def make_plot_wcs_data_outcat(data_name, outcat_wcs_path):
     :param data_name：分子云核数据块路径
     :param outcat_wcs_path：银经银纬核表路径
     """
-    data = Data(data_name)
+    data = Data(data_path=data_name)
     outcat_wcs_all = pd.read_csv(outcat_wcs_path, sep='\t')
     data_wcs = data.wcs
     data_cube = data.data_cube

@@ -7,6 +7,7 @@ import pandas as pd
 from scipy.spatial import kdtree as kdt
 import tqdm
 import threading
+from skimage import measure
 
 
 def setdiff_nd(a1, a2):
@@ -545,7 +546,7 @@ def get_feature_new(rho, rho_sort_idx, kdt_xx_loc, num, r):
     return INN, delta, grad
 
 
-def assignation(rho, delta, delta_min, rho_min, v_min, rho_Ind, INN):
+def assignation(rho, delta, delta_min, rho_min, rho_Ind, INN):
     """
     根据INN将点分配到不同的类别中去，并用统一的数字编号
 
@@ -558,6 +559,7 @@ def assignation(rho, delta, delta_min, rho_min, v_min, rho_Ind, INN):
     INN: 两个密度点的联系 % index of nearest neighbor with higher density
         INN[i] = j 表示比第i个点大的点中最近的点为第j个点
     """
+    # clust_index = np.where(((delta_ - hh) > 0).astype(np.int32).sum(1) > 0)[0]
     clust_index = np.intersect1d(np.where(rho > rho_min), np.where(delta > delta_min))
     clusterInd = -1 * np.ones_like(rho, np.int32)
     clusterInd[clust_index] = np.arange(clust_index.shape[0]) + 1
@@ -567,17 +569,10 @@ def assignation(rho, delta, delta_min, rho_min, v_min, rho_Ind, INN):
         if clusterInd[ordrho_i] == -1:  # not centroid
             clusterInd[ordrho_i] = clusterInd[INN[ordrho_i]]
 
-    clusterInd_ = np.zeros_like(clusterInd)
-    ii = 0
-    for i in range(1, clusterInd.max() + 1, 1):
-        volume_idx = np.where(clusterInd == i)[0]
-        if volume_idx.shape[0] > v_min:
-            ii += 1
-            clusterInd_[volume_idx] = ii
-    return clusterInd_
+    return clusterInd
 
 
-def divide_boundary_by_grad(clusterInd, rho, grad, gradmin, v_min, data_shape):
+def divide_boundary_by_grad(clusterInd, rho, grad, gradmin, data_shape):
     """
     根据梯度确定边界，
     clusterInd: 聚类编号[ND * 1],同一个类用一个数字标记
@@ -594,23 +589,22 @@ def divide_boundary_by_grad(clusterInd, rho, grad, gradmin, v_min, data_shape):
         clump_rho = rho[index_cluster_i]
         clump_grad = grad[index_cluster_i]
         rho_max_min = clump_rho.max() - clump_rho.min()
-
+        if rho_max_min == 0:
+            rho_max_min = 1
         clump_grad_i = clump_grad / rho_max_min
         index_grad = np.where(clump_grad_i > gradmin)[0]
+        if index_grad.shape[0] == 0:
+            continue
         rho_cc_mean = clump_rho[index_grad].mean()
 
         index_cc_rho = np.where(clump_rho > rho_cc_mean)[0]
         index_cluster = np.union1d(index_cc_rho, index_grad)
-        if index_cluster.shape[0] > v_min:
-            clump_id += 1
-            idx_cluster = index_cluster_i[index_cluster]
 
-            # clumpInd = np.zeros_like(clusterInd, np.int32)
-            clumpInd[idx_cluster] = clump_id
-            # label_data_ = clumpInd.reshape(data_shape)
-            # label_data_ = ndimage.binary_fill_holes(label_data_).astype(np.int32)
-            # label_data += label_data_
-        label_data = clumpInd.reshape(data_shape)
+        clump_id += 1
+        idx_cluster = index_cluster_i[index_cluster]
+        clumpInd[idx_cluster] = clump_id
+
+    label_data = clumpInd.reshape(data_shape)
     return label_data
 
 
@@ -647,6 +641,61 @@ def divide_boundary_by_grad_fill(clusterInd, rho, grad, gradmin, v_min, data_sha
             label_data_ = ndimage.binary_fill_holes(label_data_).astype(np.int32)
             label_data += label_data_
     return label_data
+
+
+def get_area_v_len(regionmask):
+    label_image = np.array(regionmask, np.int32)
+
+    label_image_ = measure.label(label_image)
+    props = measure.regionprops_table(label_image=label_image_,
+                                      properties=['coords', 'area', 'image'])
+
+    if label_image_.max() > 1:
+        label_image_re = np.zeros_like(label_image, np.int32)
+        numPix = props['area'].tolist()
+        # 像素最多的连通区域及其指引
+        maxnum = max(numPix)
+        index = numPix.index(maxnum)
+
+        label_image = props['image'][index]
+        label_image = np.array(label_image, np.int32)
+        props_coords = props['coords'][index]
+        if regionmask.ndim == 3:
+            label_image_re[props_coords[:, 0], props_coords[:, 1], props_coords[:, 2]] = 1
+        elif regionmask.ndim == 2:
+            label_image_re[props_coords[:, 0], props_coords[:, 1]] = 1
+    else:
+        label_image_re = label_image
+
+    if regionmask.ndim == 3:
+        v_len = label_image.shape[0]
+        l_b_area = np.where(label_image.sum(0) > 0)[0].shape[0]
+    elif regionmask.ndim == 2:
+        v_len = 1
+        l_b_area = np.where(label_image > 0)[0].shape[0]
+
+    return np.array([l_b_area, v_len, label_image_re], dtype=object)
+
+
+def get_clump_angle(regionmask, regionIntensity):
+    """
+    **orientation** : float
+        Angle between the 0th axis (rows) and the major
+        axis of the ellipse that has the same second moments as the region,
+        ranging from `-pi/2` to `pi/2` counter-clockwise.
+
+        convert angle to degree by np.rad2deg(orientation), ranging from `-90` to `90`
+    """
+    if regionmask.ndim == 3:
+        regionmask = (regionmask.sum(0) > 0).astype(np.int32)
+        regionIntensity = regionIntensity.sum(0)
+    elif regionmask.ndim == 2:
+        regionmask = regionmask.astype(np.int32)
+        regionIntensity = regionIntensity
+
+    props = measure.regionprops_table(label_image=regionmask, intensity_image=regionIntensity,
+                                      properties=['orientation'])
+    return np.rad2deg(props['orientation'])
 
 
 if __name__ == '__main__':
