@@ -257,8 +257,8 @@ def fitting_multi_gauss_params(points_all_df, params_init, ndim=3):
         return
     success = res_robust['success']
     points_num = points_all_df.shape[0]
-    cost = np.sqrt(((fit_value - Intensity)**2).sum()) / points_num   # 均方差平方和
-
+    # cost = np.sqrt(((fit_value - Intensity)**2).sum()) / points_num   # 均方差平方和
+    cost = np.sqrt(((fit_value - Intensity) ** 2).sum() / points_num)
     params_fit = params_fit.reshape([gauss_num, param_num])
     params_fit_df = pd.DataFrame(params_fit, columns=columns_name)
 
@@ -365,8 +365,13 @@ def get_fit_outcat_df(params_fit_pf, data_rms):
         # Y_threshold = func(x_lim[0], pfsc_1['y0'], pfsc_1['v0'])  # 计算云核边界阈值
         Y_threshold = data_rms   # 计算云核边界阈值,以rms为界
         clump_volume = np.where(Y >= Y_threshold)[0].shape[0]
+        if clump_volume > 0:
+            clumps_Flux_SNR[i, 0] = integrate_result[0] / (data_rms * clump_volume**0.5)
+        else:
+            print(params_fit_pf)
+            # 此处体积为0，表示检测到的云核至少在某一维上的轴长非常短，为了不让程序报错中断，此处暂定体积为1.
+            clumps_Flux_SNR[i, 0] = integrate_result[0] / data_rms
 
-        clumps_Flux_SNR[i, 0] = integrate_result[0] / (data_rms * clump_volume**0.5)
         clumps_Peak_SNR[i, 0] = pfsc_1['A'] / data_rms
 
     outcat_record['ID'] = np.array([i for i in range(clumps_num)])
@@ -396,7 +401,7 @@ def get_fit_outcat_df(params_fit_pf, data_rms):
     return outcat_record
 
 
-def exchange_pix2world(outcat_record, data_wcs):
+def exchange_pix2world(outcat_record, data_wcs, resolution):
     """
     将拟合结果整理得到的核表，转换成具有实际物理意义的核表
     [ID, Galactic Longitude, Galactic Latitude, Velocity, Size_major, Size_minor, Size_velocity, Theta, Peak, Sum,
@@ -438,17 +443,17 @@ def exchange_pix2world(outcat_record, data_wcs):
         raise TypeError
 
     table_title = outcat_record.keys()
-    arcsec = 30     # 银经银纬面上的角分辨率 一个像素为30角秒
-    v_resolution = 0.166    # 速度通道上的分辨率  一个通道为0.166 km/s
+    # arcsec = 30     # 银经银纬面上的角分辨率 一个像素为30角秒
+    # v_resolution = 0.166    # 速度通道上的分辨率  一个通道为0.166 km/s
 
     if 'Cen3' not in table_title:
         # 2d result
         cen1, cen2 = data_wcs.all_pix2world(outcat_record['Cen1'], outcat_record['Cen2'], 1)
-        size1, size2 = np.array([outcat_record['Size1'] * arcsec, outcat_record['Size2'] * arcsec])
+        size1, size2 = np.array([outcat_record['Size1'], outcat_record['Size2']])
 
         clump_Cen = np.column_stack([cen1, cen2])
-        clustSize = np.column_stack([size1, size2])
-        clustPeak, clustSum = np.array([outcat_record['Peak'], outcat_record['Sum'] * v_resolution])
+        clustSize = np.column_stack([size1, size2]) * resolution
+        clustPeak, clustSum = np.array([outcat_record['Peak'], outcat_record['Sum'] * resolution[-1]])
 
         id_clumps = []  # MWSIP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
         for item_l, item_b in zip(cen1, cen2):
@@ -471,12 +476,11 @@ def exchange_pix2world(outcat_record, data_wcs):
         # 3d result
         cen1, cen2, cen3 = data_wcs.all_pix2world(outcat_record['Cen1'], outcat_record['Cen2'],
                                                   outcat_record['Cen3'], 1)
-        size1, size2, size3 = np.array([outcat_record['Size1'] * arcsec, outcat_record['Size2'] * arcsec,
-                                        outcat_record['Size3'] * v_resolution])
-        clustPeak, clustSum = np.array([outcat_record['Peak'], outcat_record['Sum'] * v_resolution])
+        size1, size2, size3 = np.array([outcat_record['Size1'], outcat_record['Size2'], outcat_record['Size3']])
+        clustPeak, clustSum = np.array([outcat_record['Peak'], outcat_record['Sum'] * resolution[-1]])
 
         clump_Cen = np.column_stack([cen1, cen2, cen3 / 1000])
-        clustSize = np.column_stack([size1, size2, size3])
+        clustSize = np.column_stack([size1, size2, size3]) * resolution
 
         id_clumps = []  # MWISP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
         for item_l, item_b, item_v in zip(cen1, cen2, cen3 / 1000):
@@ -522,12 +526,10 @@ def fitting_main(points_all_df, params_init, clumps_id, data_rms, ndim=3):
     """
 
     if not isinstance(points_all_df, pd.core.frame.DataFrame):
-        print('the points_all type must be pandas.DataFrame.')
-        raise TypeError
+        raise TypeError('the points_all type must be pandas.DataFrame.')
 
     if not isinstance(params_init, np.ndarray):
-        print('the params_init type must be ndarray.')
-        raise TypeError
+        raise TypeError('the params_init type must be ndarray.')
 
     # print(time.ctime() + ': fitting ...')
     params_fit_df = fitting_multi_gauss_params(points_all_df, params_init, ndim=ndim)
@@ -542,7 +544,7 @@ def fitting_main(points_all_df, params_init, clumps_id, data_rms, ndim=3):
              'Size1': 2, 'Size2': 2, 'Size3': 2, 'Theta': 2, 'Peak': 2, 'Sum': 2})
         return outcat_record
     else:
-        raise TypeError
+        raise TypeError('the points_all type must be pandas.DataFrame.')
 
 
 if __name__ == '__main__':

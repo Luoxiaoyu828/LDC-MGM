@@ -8,7 +8,7 @@ from fit_clump_function import multi_gauss_fitting_new, touch_clump
 from tools.ultil_lxy import create_folder, get_points_by_clumps_id, move_csv_png, restruct_fitting_outcat,\
     get_save_clumps_xyv
 from tools import show_clumps
-from DensityClust.localDenClust2 import Data
+from DensityClust.localDenClust2 import Data, Param
 
 
 def fitting_LDC_clumps(points_path, outcat_name, data_rms, thresh_num, save_png=False, ldc_mgm_path=None,
@@ -114,11 +114,8 @@ def fitting_threading(touch_clump_record, ldc_mgm_path, file, points_path, param
         print(time.ctime() + '-->touch_clump %d/%d have %d clump[s].' % (
             touch_i, len(touch_clump_record), len(item_tcr)), file=file)
         touch_i += 1
-        # if touch_i < 19:
-        #     continue
 
         clumps_id = f_outcat.iloc[item_tcr - 1]['ID'].values.astype(np.int64)
-
         points_all_df = get_points_by_clumps_id(clumps_id, points_path)
         params_init = params_init_all[item_tcr - 1].flatten()
         if 'v_0' in points_all_df.columns:
@@ -137,7 +134,7 @@ def fitting_threading(touch_clump_record, ldc_mgm_path, file, points_path, param
             show_clumps.display_clumps_fitting(pif_1, df_temp_1, points_all_df, fig_name)
 
 
-def MGM_main(outcat_name_pix, origin_name, mask_name, save_path, thresh_num=6, save_png=False):
+def MGM_main(outcat_name_pix, origin_name, mask_name, save_path, para=None, thresh_num=6, save_png=False):
     """
     outcat_name_loc: LDC 检测像素核表
     origin_name: 检测的原始数据
@@ -155,37 +152,46 @@ def MGM_main(outcat_name_pix, origin_name, mask_name, save_path, thresh_num=6, s
     if not os.path.exists(mask_name):
         raise FileExistsError('\n' + mask_name + ' not exists.')
 
-    create_folder(save_path)
-    points_path = create_folder(os.path.join(save_path, 'points'))
-    ldc_mgm_path = create_folder(os.path.join(save_path, 'LDC_MGM_outcat'))
-    MWISP_outcat_path = os.path.join(save_path, 'MWISP_outcat.csv')
+    f_outcat = pd.read_csv(outcat_name_pix, sep='\t')
+    if f_outcat.shape[1] == 1:
+        f_outcat = pd.read_csv(outcat_name_pix, sep=',')
 
-    # step 1: 准备拟合数据
-    get_save_clumps_xyv(origin_name, mask_name, outcat_name_pix, points_path)
+    if f_outcat.shape[0] == 0:
+        return
+    else:
+        create_folder(save_path)
+        points_path = create_folder(os.path.join(save_path, 'points'))
+        ldc_mgm_path = create_folder(os.path.join(save_path, 'LDC_MGM_outcat'))
+        MWISP_outcat_path = os.path.join(save_path, 'MGM_MWISP_outcat.csv')
 
-    # step 2: 进行拟合并保存拟合像素级核表
-    data_int = Data(origin_name)
-    data_rms = data_int.rms
-    fitting_outcat_path = fitting_LDC_clumps(points_path, outcat_name_pix, data_rms, thresh_num, save_png, ldc_mgm_path)
+        # step 1: 准备拟合数据
+        get_save_clumps_xyv(origin_name, mask_name, outcat_name_pix, points_path)
 
-    # step 3: 将拟合核表整理成最终核表并保存
-    data_int.get_wcs()
-    data_wcs = data_int.wcs
-    fitting_outcat = pd.read_csv(fitting_outcat_path, sep='\t')
-    MWISP_outcat = multi_gauss_fitting_new.exchange_pix2world(fitting_outcat, data_wcs)
+        # step 2: 进行拟合并保存拟合像素级核表
+        data_int = Data(data_path=origin_name)
+        data_int.calc_background_rms(rms_key=para.rms_key, data_rms_path=para.data_rms_path, rms=para.rms)
+        data_rms = data_int.rms
+        fitting_outcat_path = fitting_LDC_clumps(points_path, outcat_name_pix, data_rms, thresh_num, save_png, ldc_mgm_path)
 
-    MWISP_outcat.to_csv(MWISP_outcat_path, sep='\t', index=False)
+        # step 3: 将拟合核表整理成最终核表并保存
+        data_int.get_wcs()
+        data_wcs = data_int.wcs
+        resolution = data_int.res
+        fitting_outcat = pd.read_csv(fitting_outcat_path, sep='\t')
+        MWISP_outcat = multi_gauss_fitting_new.exchange_pix2world(fitting_outcat, data_wcs, resolution)
 
-    aa = pd.read_csv(MWISP_outcat_path, sep='\t')
-    MWISP_outcat = aa.round(
-        {'Galactic_Longitude': 3, 'Galactic_Latitude': 3, 'Velocity': 2, 'Size_major': 0, 'Size_minor': 0,
-         'Size_velocity': 2, 'Peak': 1, 'Flux': 1, 'Flux_SNR': 1, 'Peak_SNR': 1, 'Theta': 0})
-    if os.path.exists(MWISP_outcat_path):
-        os.remove(MWISP_outcat_path)
-    MWISP_outcat.to_csv(MWISP_outcat_path, sep='\t', index=False)
+        MWISP_outcat.to_csv(MWISP_outcat_path, sep='\t', index=False)
 
-    fig_name_fit = os.path.join(save_path, 'LDC_auto_detect_result_fit.png')
-    show_clumps.make_plot_wcs_1(MWISP_outcat, data_wcs, data_int.data_cube, fig_name=fig_name_fit)
+        aa = pd.read_csv(MWISP_outcat_path, sep='\t')
+        MWISP_outcat = aa.round(
+            {'Galactic_Longitude': 3, 'Galactic_Latitude': 3, 'Velocity': 2, 'Size_major': 0, 'Size_minor': 0,
+             'Size_velocity': 2, 'Peak': 1, 'Flux': 1, 'Flux_SNR': 1, 'Peak_SNR': 1, 'Theta': 0})
+        if os.path.exists(MWISP_outcat_path):
+            os.remove(MWISP_outcat_path)
+        MWISP_outcat.to_csv(MWISP_outcat_path, sep='\t', index=False)
+
+        fig_name_fit = os.path.join(save_path, 'LDC_auto_detect_result_fit.png')
+        show_clumps.make_plot_wcs_1(MWISP_outcat, data_wcs, data_int.data_cube, fig_name=fig_name_fit)
 
 
 if __name__ == '__main__':
