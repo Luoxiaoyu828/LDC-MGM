@@ -93,6 +93,7 @@ class Data:
                         pass
 
                     self.data_header = data_header
+                    self.res = self.res[:self.n_dim]
                     return
 
                 l_b_v_name = []
@@ -168,6 +169,7 @@ class Data:
 
                 self.shape = self.data_cube.shape
                 self.n_dim = self.data_cube.ndim
+                self.res = self.res[:self.n_dim]
 
     def calc_background_rms(self, rms_key='RMS', data_rms_path='', rms=0.23):
         """
