@@ -27,7 +27,7 @@ class Header:
                               ('K (T_MB)',), ('GLON-CAR',), (16.75,), (-0.00833333333333,), (181,), (0.0,), ('GLAT-CAR',),
                               (0.75,), (0.00833333333333,), (91.0,), (0.0,), (0.0,), ('13CO(1-0)',), (0.0,), (10826.0,),
                               (110201353000.0,), (0.0152257818068,), (0.0152257818068,), (0.0,), ('GILDAS Consortium',),
-                              (datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),), (rms,), ('m/s',)]
+                              (datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),), (rms,)]
         else:
             raise ValueError('only support 2-dimension and 3-dimension!')
 

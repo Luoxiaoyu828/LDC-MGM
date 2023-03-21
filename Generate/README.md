@@ -18,11 +18,14 @@ information: [dict]Header information.The following is an introduction to its fo
 Keywords for 3D data:{'SIMPLE', 'BITPIX', 'NAXIS', 'NAXIS1', 'NAXIS2', 'NAXIS3', 'DATAMIN', 'DATAMAX', 'BUNIT',
                         'CTYPE1', 'CRVAL1', 'CDELT1', 'CRPIX1', 'CROTA1', 'CTYPE2', 'CRVAL2', 'CDELT2', 'CRPIX2',
                         'CROTA2', 'CTYPE3', 'CRVAL3', 'CDELT3', 'CRPIX3', 'CROTA3', 'EQUINOX', 'LINE', 'ALTRVAL',
-                        'ALTRPIX', 'RESTFREQ', 'BMAJ', 'BMIN', 'BPA', 'ORIGIN', 'DATE', 'RMS', 'CUNIT3'}
+                        'ALTRPIX', 'RESTFREQ', 'BMAJ', 'BMIN', 'BPA', 'ORIGIN', 'DATE', 'RMS', 'CUNIT3'
+                        }
+                        
 Keywords for 2D data:{'SIMPLE', 'BITPIX', 'NAXIS', 'NAXIS1', 'NAXIS2', 'DATAMIN', 'DATAMAX', 'BUNIT',
                         'CTYPE1', 'CRVAL1', 'CDELT1', 'CRPIX1', 'CROTA1', 'CTYPE2', 'CRVAL2', 'CDELT2', 'CRPIX2',
                         'CROTA2', 'EQUINOX', 'LINE', 'ALTRVAL', 'ALTRPIX', 'RESTFREQ', 'BMAJ', 'BMIN', 'BPA', 
-                        'ORIGIN', 'DATE', 'RMS', 'CUNIT3'}
+                        'ORIGIN', 'DATE', 'RMS'
+                        }
 example:information = {'SIMPLE': (True, )}
 ```
 This is an example:
