@@ -1,0 +1,43 @@
+detect:
+  data_name: 'F:/M16_data/hdu0_mosaic_L_3D.fits'
+  model: LDC
+  para:
+    delta_min: 4
+    gradmin: 0.01
+    noise_times: 6
+    rms_times: 9
+    v_min: 27
+  save_folder: ''
+  save_loc: false
+  split: false
+  use_mgm: True
+generate:
+  model: simulation
+  simulation:
+    dim: 3
+    fits_header_path: ''
+    history_info: null
+    information: null
+    n: 10
+    number: 100
+    path1: ''
+    size_v: 100
+    size_x: 100
+    size_y: 100
+  synthetic:
+    core_sample_path: ./Generate/sample.txt
+    n: 10
+    number: 10
+    path: ''
+    real_data_path: ''
+match:
+  detected_outcat_path: ''
+  match_save_path: ''
+  simulated_outcat_path: ''
+mgm:
+  mask_name: ''
+  origin_name: ''
+  outcat_name_loc: ''
+  save_path: ''
+  save_png: false
+  thresh_num: 1
