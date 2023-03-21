@@ -1,18 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="luoxy@210.42.42.129:5096 (2)">
+  <component name="PublishConfigData" autoUpload="Always" serverName="luoxy@210.42.42.129:5096 password" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
-      <paths name="luoxy@210.42.42.129:5096">
+      <paths name="luoxy@210.42.42.129:5096 password">
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="luoxy@210.42.42.129:5096 (2)">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/home/data/luoxy/work/LDC" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>

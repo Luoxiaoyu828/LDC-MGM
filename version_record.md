@@ -4,11 +4,12 @@ python setup.py sdist
 
 python setup.py bdist_wheel
 
+vastlxy@828
 twine upload dist/[file_name]
 
 Enter your username: vastlxy_-.828
 
-Enter your password: vastlxy@828
+Enter your password: 
 
 
 1.1.4--->1.1.5  
@@ -114,4 +115,10 @@ Data类中增加了：
     cost = np.sqrt(((fit_value - Intensity)**2).sum()) / points_num   # 均方差平方和
     公式不是均方差平方和，改为：
     cost = np.sqrt(((fit_value - Intensity)**2).sum() / points_num)   # 均方差平方和
+
+1.4.2--1.4.3
+小的改动
+
+1.4.3--1.4.4
+wcs for 2d case: remove 'm/s' key-word
 

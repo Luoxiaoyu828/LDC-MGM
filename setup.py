@@ -2,11 +2,11 @@ from setuptools import setup
 
 
 def readme_file():
-      with open("README.md", encoding="utf-8") as wb:
+      with open("version_record.md", encoding="utf-8") as wb:
             return wb.read()
 
 setup(name='DensityClust',
-      version='1.4.3',
+      version='1.4.4',
       author='Luo Xiaoyu',
       description='Molecular Clump extraction algorithm based on Local Density Clustering*',
       author_email='vastlxy@163.com',

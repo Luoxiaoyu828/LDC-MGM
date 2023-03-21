@@ -1,4 +1,4 @@
-/.idea/
+/.idea
 /0170+010_L/
 /0170+010_L/MGM_problem_cell/0155+030_L/
 /data/
@@ -13,7 +13,7 @@ other/yyy.py
 *.csv
 <<<<<<< HEAD
 temp_match.py
-temp.py
+temp_mgm.py
 temp_ldc_400_449.py
 temp_ldc_450_799_pool.py
 temp_ldc.py
@@ -28,8 +28,8 @@ temp_mmm.py
 tttt.py
 >>>>>>> 60c5b86da81f699f019c313eeae816b99d496eba
 
-setup.py
-README.MD
 fit_simulate_data.py
 /0170+010_L/MGM_problem_cell/
 /other/
+version_record.md
+setup.py
