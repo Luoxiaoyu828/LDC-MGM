@@ -1,13 +1,14 @@
 import os
 import numpy as np
 from astropy.io import fits
+from astropy.coordinates import SkyCoord
 import pandas as pd
 import matplotlib.pyplot as plt
 import shutil
-from astropy.coordinates import SkyCoord
+import threading
+
 from DensityClust.localDenClust2 import Data
 from DensityClust.localDenClust2 import LocalDensityCluster as LDC
-import threading
 
 
 def make_plot_wcs_1(outcat_wcs, data_wcs, data_cube):
@@ -59,7 +60,7 @@ def show_outcat_data(data_name, outcat_name):
      data_name = r'F:\Parameter_reduction\LDC\0170+010_L\0170+010_L.fits'
      outcat_name = r'F:\Parameter_reduction\LDC\0170+010_L\LDC_auto_loc_outcat.csv'
     """
-    data = Data(data_name)
+    data = Data(data_path=data_name)
     outcat = pd.read_csv(outcat_name, sep=',')
     if 'Cen1' in outcat.keys():
         ldc = LDC(data=data, para=None)
@@ -96,8 +97,8 @@ def get_save_clumps_xyv(origin_data_name, mask_name, outcat_name, save_path, thr
         None
     """
     create_folder(save_path)
-
-    data = fits.getdata(origin_data_name)
+    data_instance = Data(data_path=origin_data_name)
+    data = data_instance.data_cube
     mask = fits.getdata(mask_name)
     f_outcat = pd.read_csv(outcat_name, sep='\t')
     if f_outcat.shape[1] == 1:
@@ -152,8 +153,7 @@ def save_point_csv(save_path, mask_flatten, Y, X, clumps_id_st_end_):
     """
     for id_clumps_item in clumps_id_st_end_:
         clump_item_name = os.path.join(save_path, 'clump_id_xyz_intensity_%04d.csv' % id_clumps_item)
-        if os.path.exists(clump_item_name):
-            continue
+
         clump_item_df = pd.DataFrame([])
         ind = np.where(mask_flatten == id_clumps_item)[0]
         if X.shape[1] == 3:
@@ -309,7 +309,7 @@ if __name__ == '__main__':
     outcat_name = r'F:\Parameter_reduction\LDC\0170+010_L\LDC_auto_loc_outcat_fitting\fitting_outcat.csv'
     outcat_name_1 = r'F:\Parameter_reduction\LDC\0170+010_L\LDC_auto_loc_outcat.csv'
     origin_data_name = r'F:\Parameter_reduction\LDC\0170+010_L\0170+010_L.fits'
-    data = Data(origin_data_name)
+    data = Data(data_path=origin_data_name)
 
     data_wcs = data.wcs
     data_cube = data.data_cube
