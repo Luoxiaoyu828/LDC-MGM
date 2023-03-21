@@ -50,7 +50,7 @@ def LDC_MGM_split_mode(data_name, para, save_folder_all, save_loc, save_mgm_png)
         detect_log = ldc_cfg['detect_log']
         outcat_i = pd.read_csv(outcat_name, sep='\t')
         loc_outcat_i = split_cube.get_outcat_i(outcat_i, ii)  # 取局部数据块的局部核表，根据块的位置，局部区域会有不同
-        data = Data(sub_data_name)
+        data = Data(data_path=sub_data_name)
         ldc = LDC(data=data, para=None)
         outcat_wcs = ldc.change_pix2world(loc_outcat_i)
         shutil.copy(detect_log, os.path.join(save_folder_all, 'LDC_auto_detect_log_%02d.txt' % ii))
@@ -65,7 +65,7 @@ def LDC_MGM_split_mode(data_name, para, save_folder_all, save_loc, save_mgm_png)
         outcat_fit_wcs = pd.read_csv(outcat_fit_wcs_path, sep='\t')
 
         fig_name_fit = os.path.join(sub_save_folder, 'LDC_auto_detect_result_fit.png')
-        data = Data(sub_data_name)
+        data = Data(data_path=sub_data_name)
         data_wcs = data.wcs
         show_clumps.make_plot_wcs_1(outcat_fit_wcs, data_wcs, data.data_cube, fig_name=fig_name_fit)
         outcat_fit_wcs_all = pd.concat([outcat_fit_wcs_all, outcat_fit_wcs], axis=0)
@@ -75,7 +75,7 @@ def LDC_MGM_split_mode(data_name, para, save_folder_all, save_loc, save_mgm_png)
     outcat_fit_wcs_all.to_csv(outcat_fit_wcs_all_name, sep='\t', index=False)
 
     # 保存整合的像素的核表及绘制检测云核的位置
-    data = Data(data_name)
+    data = Data(data_path=data_name)
     ldc = LDC(data=data, para=None)
     data_wcs = ldc.data.wcs
     outcat_wcs_all = pd.read_csv(outcat_wcs_all_name, sep='\t')
@@ -109,15 +109,16 @@ def LDC_MGM_main(data_name, para, save_folder=None, split=False, save_loc=False,
         ldc_cfg = localDenCluster(data_name, para, save_folder, save_loc)
         outcat_name = ldc_cfg['outcat_name']
         mask_name = ldc_cfg['mask_name']
+        data_name = ldc_cfg['data_path']
 
-        mgm.MGM_main(outcat_name, data_name, mask_name, save_folder, thresh_num=thresh_num, save_png=save_mgm_png)
+        mgm.MGM_main(outcat_name, data_name, mask_name, save_folder, para=para, thresh_num=thresh_num, save_png=save_mgm_png)
 
 
 if __name__ == '__main__':
     num = 2
     data_name = r'D:\LDC\test_data\synthetic\synthetic_model_000%d.fits' % num
-    para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=5, rms_times=2)
-    para.touch = False
+    para = Param(delta_min=4, gradmin=0.01, v_min=[25, 5], noise_times=5, rms_times=2, rms_key='RMS')
+    para.rm_touch_edge = False
     save_folder = r'D:\LDC\test_data\R2_R16_region\0145-005_L13_noise_2_rho_5_128_deb1'
     save_mgm_png = False
     LDC_MGM_main(data_name, para, save_folder, split=False, save_loc=False, save_mgm_png=save_mgm_png)
