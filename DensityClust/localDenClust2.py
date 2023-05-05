@@ -819,7 +819,7 @@ class LocalDensityCluster:
             LDC_outcat = pd.DataFrame(LDC_outcat, columns=table_title)
             self.result.detect_num[0] = LDC_outcat.shape[0]
             if self.para.rm_touch_edge:
-                LDC_outcat = self.touch_edge(LDC_outcat)
+                LDC_outcat, label_data_all = self.touch_edge(LDC_outcat, label_data_all)
                 self.result.detect_num[1] = LDC_outcat.shape[0]
 
             if self.para.save_loc:
@@ -908,7 +908,7 @@ class LocalDensityCluster:
             outcat_wcs = pd.DataFrame(outcat_wcs, columns=table_title)
             return outcat_wcs
 
-    def touch_edge(self, outcat):
+    def touch_edge(self, outcat, label_data_all):
         """
         判断云核是否到达边界
         :param outcat:
@@ -956,11 +956,15 @@ class LocalDensityCluster:
                 [inde_all.append(item) for item in item_]
 
             inde_all = np.array(list(set(inde_all)))
+            label_data_all_ = label_data_all.copy()
         if inde_all.shape[0] > 0:
             outcat = outcat.drop(outcat.index[inde_all])
+            for item_i in outcat.index[inde_all]:
+                label_data_all_[label_data_all == item_i] = 0
+
         else:
             outcat = outcat
-        return outcat
+        return outcat, label_data_all_
 
     def get_outcat_local(self, outcat):
         """
