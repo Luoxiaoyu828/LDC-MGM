@@ -46,7 +46,8 @@ from DensityClust.localDenst2 import Param
 #### setting params & filename
 ```
 data_name = r'example_data\3d_Clumps\gaussian_out_000.fits'
-para = Param(delta_min=4, gradmin=0.01, v_min=[25, 5], noise_times=5, rms_times=2, rms_key='RMS')
+para = Param(delta_min=4, gradmin=0.01, v_min=[25, 5], noise_times=3, rms_times=5, res=[30, 30, 0.166], dc='auto',
+                 data_rms_path='', rms_key='RMS', rms=rms_value, id_prefix='MWISP')
 para.rm_touch_edge = False
 save_folder = r'temp'
 ```
