@@ -1,6 +1,12 @@
 # LDC-MGM
 Molecular Clump extraction algorithm based on Local Density Clustering
 
+### Abstract
+The detection and parameterization of molecular clumps are the first step in studying them. We propose a method based on the Local Density Clustering algorithm while physical parameters of those clumps are measured using the
+Multiple Gaussian Model algorithm. One advantage of applying the Local Density Clustering to the clump detection and segmentation, is the high accuracy under different signal-to-noise levels. The Multiple Gaussian
+Model is able to deal with overlapping clumps whose parameters can reliably be derived. Using simulation and synthetic data, we have verified that the proposed algorithm could accurately characterize the morphology and flux
+of molecular clumps. The total flux recovery rate in 13CO (J = 1−0) line of M16 is measured as 90.2%. The detection rate and the completeness limit are 81.7% and 20 K km s−1 in 13CO (J = 1−0) line of M16, respectively.
+
 *Note* The core idea of the algorithm comes from [this paper](https://ui.adsabs.harvard.edu/abs/2014Sci...344.1492R/abstract)
 ```
 Rodriguez A, Laio A. Clustering by fast search and find of density peaks[J]. Science, 2014, 344(6191):1492.
@@ -17,61 +23,57 @@ The code is completed with Python  3. The following dependencies are needed to r
 * scipy~=1.6.2
 * astropy~=4.2
 
-
-
-# Install
+### Install
 I suggest you install the code using pip from an Anaconda Python 3 environment. From that environment:
 ```
 git clone https://github.com/Luoxiaoyu828/LDC-MGM.git
 cd LDC-MGM/dist
-pip install DensityClust-1.4.4.tar.gz
+pip install DensityClust-***.tar.gz
 ```
 or you can install LDC package directly in pypi.com. using:
 ```
 pip install DensityClust
 ```
-
-# Usage
-
-## import package
+### Usage
+#### import package
 ```
 import astropy.io.fits as fits
 from tools.make_plot import make_plot
 import LDC_MGM.LDC_MGM_main as ldc_mgm
 import LDC_MGM.LDC_main as ldc
-
+from DensityClust.localDenst2 import Param
 ```
-## setting params & filename
+#### setting params & filename
 ```
-data_name = r'*******.fits'
+data_name = r'example_data\3d_Clumps\gaussian_out_000.fits'
 para = Param(delta_min=4, gradmin=0.01, v_min=[25, 5], noise_times=5, rms_times=2, rms_key='RMS')
 para.rm_touch_edge = False
-save_folder = r'########'
+save_folder = r'temp'
 ```
-## LDC
+How to set the parameters of algorithm, you can use the command 
+```angular2html
+from DensityClust.localDenst2 import Param
+help(Param)
+```
+
+#### LDC
 ```
 ldc.LDC_main(data_name, para, save_folder)
 ```
-## LDC MGM
+#### LDC MGM
 ```
 save_mgm_png = False
 ldc_mgm.LDC_MGM_main(data_name, para, save_folder, split=False, save_mgm_png=save_mgm_png)
 ```
-
-        
-## make picture
+#### make picture
 ```
-data = fits.getdata(r'data\3d_Clumps\gaussian_out_000.fits')
+data = fits.getdata(r'example_data\3d_Clumps\gaussian_out_000.fits')
 outcat = r'***.csv'
 make_plot.make_plot(outcat, data, lable_num=False)
 ```
-
-
-
 <img src="https://github.com/Luoxiaoyu828/LDC-MGM/blob/main/data/2d_Clumps/gaussian2D_out_000/result.png" width="400px">
 
-
-# Citation
+## Citation
 If you use this code in a scientific publication, I would appreciate citation/reference to this repository. 
 
 ```

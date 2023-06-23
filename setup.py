@@ -6,7 +6,7 @@ def readme_file():
             return wb.read()
 
 setup(name='DensityClust',
-      version='1.4.4',
+      version='1.4.5',
       author='Luo Xiaoyu',
       description='Molecular Clump extraction algorithm based on Local Density Clustering*',
       author_email='vastlxy@163.com',
