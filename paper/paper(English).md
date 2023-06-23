@@ -30,7 +30,7 @@ Parameters setting of simulation cloud cores generation in synthetic datasets:
 - Randomly selected 15 synthetic single uncut simulation cloud cores to any location, while removing parts beyond the 13CO data block boundary.
 - Total number of simulated cloud cores:10000
 
-![demo](https://github.com/Luoxiaoyu828/LDC-MGM/blob/main/simulated_clump_3d_show.jpg)
+![demo](https://github.com/Luoxiaoyu828/LDC_MGM/blob/main/example_data/simulated_clump_3d_show.jpg)
 
 ## Parameter Setting of Algorithm
 
