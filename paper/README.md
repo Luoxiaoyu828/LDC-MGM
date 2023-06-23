@@ -17,7 +17,7 @@ This repo provides a clean implementation of LDC algorithm using all the best pr
 - 单个数据块中仿真云核个数：10(低)、40(中)、100(高)
 - 总的仿真云核个数：10000个
 
-![demo](https://github.com/Luoxiaoyu828/LDC-MGM/blob/main/simulated_clump_3d_show.jpg)
+![demo](https://github.com/Luoxiaoyu828/LDC_MGM/blob/main/example_data/simulated_clump_3d_show.jpg)
 
 ## 合成数据集
 合成数据集中的仿真云核生成的参数如下：
