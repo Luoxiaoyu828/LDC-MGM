@@ -19,10 +19,13 @@ def LDC_main(data_name, para, save_folder=None):
             None
 
         Usage:
+        from DensityClust.localDenClust2 import Param
+        from LDC_MGM import LDC_main as ldc
+
         data_name = r'*******.fits'
         para = Param(delta_min=4, gradmin=0.01, v_min=[25, 5], noise_times=2, rms_times=5, rms_key='RMS')
         save_folder = r'#####'
-        LDC_main(data_name, para, save_folder)
+        ldc.LDC_main(data_name, para, save_folder)
 
     """
 

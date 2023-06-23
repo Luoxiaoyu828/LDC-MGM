@@ -106,13 +106,15 @@ def LDC_MGM_main(data_name, para, save_folder=None, split=False, save_mgm_png=Fa
     save_mgm_png: 是否保存MGM的中间结果图片，默认为False: 不保存
 
     Usage:
+    from DensityClust.localDenClust2 import Param
+    from LDC_MGM import LDC_MGM_main as ldc_mgm
 
     data_name = r'*******.fits'
     para = Param(delta_min=4, gradmin=0.01, v_min=[25, 5], noise_times=5, rms_times=2, rms_key='RMS')
     para.rm_touch_edge = False
     save_folder = r'########'
     save_mgm_png = False
-    LDC_MGM_main(data_name, para, save_folder, split=False, save_mgm_png=save_mgm_png)
+    ldc_mgm.LDC_MGM_main(data_name, para, save_folder, split=False, save_mgm_png=save_mgm_png)
 
     """
     if save_folder is None:
