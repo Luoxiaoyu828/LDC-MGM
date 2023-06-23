@@ -70,10 +70,10 @@ def LDC_main_split(data_name, para, save_folder=None, save_loc=False):
         save_folder = data_name.replace('.fits', '')
     os.makedirs(save_folder, exist_ok=True)
 
-    localDenCluster_split_mode(data_name, para, save_folder_all=save_folder, save_loc=save_loc)
+    localDenCluster_split_mode(data_name, para, save_folder_all=save_folder)
 
 
-def localDenCluster_split_mode(data_name, para, save_folder_all, save_loc):
+def localDenCluster_split_mode(data_name, para, save_folder_all):
     """
     LDC algorithm
     :param data_name: 待检测数据的路径(str)，fits文件

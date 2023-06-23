@@ -174,7 +174,7 @@ class Data:
     def calc_background_rms(self, rms_key='RMS', data_rms_path='', rms=0.23):
         """
          This functions finds an estimate of the RMS noise in the supplied data data_cube.
-        :return: bkgrms_value
+        :return: background rms value
         """
         data_header = self.data_header
         keys = data_header.keys()
@@ -279,10 +279,35 @@ class Data:
 
 
 class Param:
-    def __init__(self, delta_min=4, gradmin=0.01, v_min=None, noise_times=2, rms_times=5, dc=None, v_st_end=None,
-                 l_st_end=None, b_st_end=None, res=None, save_loc=False, rms_key='', data_rms_path='', rms=None):
+    def __init__(self, delta_min=4, gradmin=0.01, v_min=None, noise_times=2, rms_times=5, dc='auto', v_st_end=None,
+                 l_st_end=None, b_st_end=None, res=None, save_loc=False, rms_key='', data_rms_path='', rms=None,
+                 id_prefix='MWISP'):
         """
-        para.rho_min:
+
+        @param delta_min: default value is 4.
+            delta_min represents the minimum distance between the centers of the two points, where delta is measured
+            by computing the minimum distance between point_i and any other point with higher density.
+            if delta of point_i >= delta_min,
+                the point_i may be one center of cluster (also considering the rho of points)
+
+        @param gradmin: default value is 0.01.
+            grad_min is used to determine the region of a clump.
+
+        @param v_min: [A_, B_]
+            The lowest number of pixel which a clump can contain.
+            If a candidate clump has fewer than this number of pixels, it will be ignored.
+            The default value is [25， 5] pixels. A_ represents the minimum integral area in the space direction,
+            and b represents the minimum span in the velocity direction.
+            If it is 2-dimensional data, only A_ will be used.
+            If it is 3-dimensional data, both A_ and B_ will be used.
+
+        @param noise_times: thresh = noise_times * RMS
+            The noise level of the data, used for data truncation calculation.
+            The smallest significant peak height. Peaks which have a maximum data value less than
+            this value are ignored. The value can be supplied as a mutliple of the RMS noise using
+            the syntax "noise_times*RMS"
+
+        @param rms_times: rho_min = rms_times * RMS
             rho_min represents the minimum peak intensity value of a candidate clump. The value can be supplied as
             a mutliple of the RMS noise using the syntax "rms_times * RMS"
             rho is the local density of a point_i.
@@ -291,32 +316,50 @@ class Param:
             Note: The higher the value, the more likely it is to merge the two candidate clumps,
             and the smaller the value, the more likely it is to separate the clump.
 
-        para.delta_min:
-            delta_min represents the minimum distance between the centers of the two points, where delta is measured
-            by computing the minimum distance between point_i and any other point with higher density.
-            if delta of point_i >= delta_min,
-                the point_i may be one center of cluster (also considering the rho of points)
+        @param dc:
+            Standard deviation of Gaussian filtering.
 
-        para.grad_min:
-            grad_min is used to determine the region of a clump.
+        @param v_st_end:
+            The start and end range of the data above the velocity, the uint is km/s.
+            The default value is None, which detects the entire velocity range of the data.
 
-        para.thresh:
-            The smallest significant peak height. Peaks which have a maximum data value less than
-            this value are ignored. The value can be supplied as a mutliple of the RMS noise using
-            the syntax "noise_times*RMS"
+        @param l_st_end:
+            This parameter specifies the range of the data in the galactic longitude, the uint is degrees.
+            The default value of this parameter is None, which indicates that the entire range will be detected.
 
-        para.v_min: [A_, B_]
-            The lowest number of pixel which a clump can contain.
-            If a candidate clump has fewer than this number of pixels, it will be ignored.
-            The default value is [9, 3] pixels. A_ represents the minimum integral area in the space direction,
-            and b represents the minimum span in the velocity direction.
-            If it is 2-dimensional data, only A_ will be used. If it is 3-dimensional data, both A_ and B_ will be used.
+        @param b_st_end:
+            This parameter specifies the range of the data in the galactic latitude, the uint is degrees.
+            The default value of this parameter is None, which indicates that the entire range will be detected.
 
-        para.noise: The noise level of the data, used for data truncation calculation
-        para.dc: Standard deviation of Gaussian filtering
-        para.rms_key : The rms key of header.
+        @param res:
+            This parameter specifies the spatial resolution and velocity resolution of the data
+            in the form of [res_l, res_b, res_v], with units of [arcseconds, arcseconds, km/s].
+            The default values are [30, 30, 0.166], which represent the resolution of
+            the Milky Way Imaging Scroll Painting (MWISP) project data.
+            This parameter is used when converting pixel coordinates to physical coordinates in the algorithm.
 
+        @param save_loc:
+            This parameter indicates whether to save the kernel catalog of local regions in the detected data.
+            The default value is False, which means it will not be saved.
+
+        @param rms_key:
+            The keyword in the FITS data header that is used to read the noise level (RMS) of the data.
+
+        @param data_rms_path:
+            The path to the RMS file, where the RMS values are taken from the median of the data.
+            The parameter is ignored if 'rms_key' is set and present in the data header.
+
+        @param rms:
+            The set RMS value.
+            If 'rms_key' is set and present in the data's header, this parameter will be ignored.
+            Alternatively, if 'data_rms_path' is set and the  file path exists, the parameter will also be ignored.
+
+        @param id_prefix:
+            The identifier for the ID in the clump table, indicating which survey project the tabular data belongs to.
+            The default value is 'MWISP'.
         """
+
+        self.id_prefix = id_prefix
         if res is None:
             res = [30, 30, 0.166]
         if v_min is None:
@@ -366,6 +409,7 @@ class Param:
         else:
             raise ValueError('The value of resolution must be spatial or velocity and the length of array at least 2.')
         # distance_w[distance_w <= 1] = 1
+        distance_w = np.ones_like(self.res)   # todo 暂时不通过数据的分辨率来修改算法参数
         self.distance_w = distance_w
 
     def set_params_by_data(self, data):
@@ -374,6 +418,18 @@ class Param:
             self.noise = data.rms * self.noise_times
         else:
             raise ValueError('rms is not exists!')
+        if type(self.dc) is float:
+            self.dc = [self.dc]
+
+        if self.dc == 'auto':
+            pass
+        else:
+            if len(self.dc) == 1:
+                self.dc = [self.dc[0] for item in range(data.n_dim)]
+            elif len(self.dc) < data.n_dim:
+                self.dc = [self.dc[0], self.dc[0], self.dc[1]]
+            else:
+                self.dc = self.dc[:data.n_dim]
 
     def summary(self):
         table_title = ['rho_min[%.1f*rms]' % self.rms_times, 'delta_min[4]', 'v_min[27]', 'gradmin[0.01]',
@@ -626,7 +682,7 @@ class LocalDensityCluster:
         else:
             data = self.data.data_cube
             n_dim = self.data.n_dim
-            dc_ = np.arange(0.3, 0.9, 0.01)
+            dc_ = np.arange(0.3, 0.8, 0.05)
             dc_len = dc_.shape[0]
             data_esmit = np.zeros((data.shape + dc_.shape), np.float32)
             for i, dc in enumerate(dc_):
@@ -664,7 +720,7 @@ class LocalDensityCluster:
         k2 = delta_min * self.para.distance_w.min()  # 第2次计算点的邻域大小
         xx = get_xyz(data)  # xx: 3D data coordinates  坐标原点是 1
         # 密度估计
-        if self.para.dc is None:
+        if self.para.dc == 'auto':
             data_estim = self.esti_rho()
         else:
             data_estim = filters.gaussian(data, self.para.dc)
@@ -734,7 +790,7 @@ class LocalDensityCluster:
         my_print(' ' * 10 + 'Outcats are calculated, using %.2f seconds.' % d_t, self.vosbe)
 
         self.result.outcat = LDC_outcat
-        self.result.outcat_wcs = self.change_pix2world(self.result.outcat)
+        self.result.outcat_wcs = self.change_pix2world(self.result.outcat, id_prefix=self.para.id_prefix)
 
         self.result.mask = mask
         self.result.data = self.data
@@ -826,22 +882,24 @@ class LocalDensityCluster:
                 loc_LDC_outcat = self.get_outcat_local(LDC_outcat)
                 self.result.detect_num[2] = loc_LDC_outcat.shape[0]
                 self.result.loc_outcat = loc_LDC_outcat
-                self.result.loc_outcat_wcs = self.change_pix2world(loc_LDC_outcat)
+                self.result.loc_outcat_wcs = self.change_pix2world(loc_LDC_outcat, id_prefix=self.para.id_prefix)
 
         return LDC_outcat, label_data_all
 
     def change_pix2world(self, outcat, id_prefix='MWISP'):
         """
         将算法检测的结果(像素单位)转换到天空坐标系上去
-        :return:
-        outcat_wcs
-        ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'Peak', 'Sum', 'Volume']
-        -->3d
+        @param outcat: 像素核表
+        @param id_prefix: id标识，用来标记数据的来源
+        @return:
+            outcat_wcs
+            ['ID', 'Peak1', 'Peak2', 'Peak3', 'Cen1', 'Cen2', 'Cen3', 'Size1', 'Size2', 'Size3', 'Peak', 'Sum', 'Volume']
+            -->3d
 
-         ['ID', 'Peak1', 'Peak2', 'Cen1', 'Cen2',  'Size1', 'Size2', 'Peak', 'Sum', 'Volume']
-         -->2d
+             ['ID', 'Peak1', 'Peak2', 'Cen1', 'Cen2',  'Size1', 'Size2', 'Peak', 'Sum', 'Volume']
+             -->2d
+             @todo: id_prefix参数还没有放到Param类中
         """
-        # outcat_record = self.result.outcat_record
         table_title = outcat.keys()
         if outcat is None:
             return None
@@ -938,6 +996,7 @@ class LocalDensityCluster:
                 [inde_all.append(item) for item in item_]
 
             inde_all = np.array(list(set(inde_all)))
+            label_data_all_ = label_data_all.copy()
         else:
             [size_x, size_y] = self.data.data_cube.shape
             indx = []
@@ -1016,11 +1075,16 @@ class LocalDensityCluster:
                        'pix_min[25, 5]=[%d, %d]' % (self.para.v_min[0], self.para.v_min[1]), 'gradmin[0.01]',
                        'noise[%.1f*rms]' % self.para.noise_times, 'dc']
         para = [self.para.rho_min, -1, -1, self.para.gradmin, self.para.noise,
-                self.para.dc]
+                -2]
+        if self.para.dc == 'auto':
+            dc_string = 'auto'
+        else:
+            dc_ = [str(item) for item in self.para.dc]
+            dc_string = '[' + ', '.join(dc_) + ']'
         para_inf = []
         for item_title, item_value in zip(table_title, para):
-            if item_value is None:
-                para_inf.append(item_title + ' = %s\n' % 'None')
+            if item_value == -2:
+                para_inf.append(item_title + ' = %s\n' % dc_string)
             elif item_value == -1:
                 para_inf.append(item_title + '\n')
             else:
