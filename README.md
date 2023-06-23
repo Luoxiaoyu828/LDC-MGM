@@ -24,7 +24,7 @@ I suggest you install the code using pip from an Anaconda Python 3 environment. 
 ```
 git clone https://github.com/Luoxiaoyu828/LDC-MGM.git
 cd LDC-MGM/dist
-pip install DensityClust-1.0.8.tar.gz
+pip install DensityClust-1.4.4.tar.gz
 ```
 or you can install LDC package directly in pypi.com. using:
 ```
@@ -32,20 +32,42 @@ pip install DensityClust
 ```
 
 # Usage
+
+## import package
 ```
-import DensityClust.LocalDensityClustering_main as LDC
 import astropy.io.fits as fits
-from DensityClust import make_plot
-
-para = {"gradmin": 0.01, "rhomin": 0.7, "deltamin": 4, "v_min": 27, "rms": 0.46, "dc": 0.6, "is_plot": 0}
-LDC.localDenCluster(r'data\3d_Clumps\gaussian_out_000.fits', para=para)
-
-# make picture
-data = fits.getdata(r'data\3d_Clumps\gaussian_out_000.fits')
-outcat = r'data\3d_Clumps\gaussian_out_000\LDC_outcat.txt'
-make_plot.make_plot(outcat, data, lable_num=False)
+from tools.make_plot import make_plot
+import LDC_MGM.LDC_MGM_main as ldc_mgm
+import LDC_MGM.LDC_main as ldc
 
 ```
+## setting params & filename
+```
+data_name = r'*******.fits'
+para = Param(delta_min=4, gradmin=0.01, v_min=[25, 5], noise_times=5, rms_times=2, rms_key='RMS')
+para.rm_touch_edge = False
+save_folder = r'########'
+```
+## LDC
+```
+ldc.LDC_main(data_name, para, save_folder)
+```
+## LDC MGM
+```
+save_mgm_png = False
+ldc_mgm.LDC_MGM_main(data_name, para, save_folder, split=False, save_mgm_png=save_mgm_png)
+```
+
+        
+## make picture
+```
+data = fits.getdata(r'data\3d_Clumps\gaussian_out_000.fits')
+outcat = r'***.csv'
+make_plot.make_plot(outcat, data, lable_num=False)
+```
+
+
+
 <img src="https://github.com/Luoxiaoyu828/LDC-MGM/blob/main/data/2d_Clumps/gaussian2D_out_000/result.png" width="400px">
 
 
