@@ -7,43 +7,19 @@ from tools.show_clumps import make_plot_wcs_1
 from DensityClust.localDenClust2 import Data, Param
 
 
-def LDC_main(data_name, para, save_folder=None, save_loc=False):
-    """
-        LDC algorithm
-        :param data_name: 待检测数据的路径(str)，fits文件
-        :param para: 算法参数, dict
-            para.rho_min: Minimum density [5*rms]
-            para.delta_min: Minimum delta [4]
-            para.v_min: Minimum volume [25, 5]
-            para.noise: The noise level of the data, used for data truncation calculation [2*rms]
-            para.dc: auto
-        :param save_folder: 检测结果保存路径
-        :param save_loc: 是否保存检测的局部核表，默认为False(不保存)
-
-        :return:
-            None
-    """
-
-    if save_folder is None:
-        save_folder = data_name.replace('.fits', '')
-    os.makedirs(save_folder, exist_ok=True)
-
-    localDenCluster(data_name, para, save_folder=save_folder, save_loc=save_loc)
-
-
-def localDenCluster(data_name, para, save_folder, save_loc):
+def localDenCluster(data_name, para, save_folder):
     """
     LDC algorithm
 
     :param data_name: 待检测数据的路径(str)，fits文件
     :param para: 算法参数，dict
-        para.rho_min: Minimum density [5*rms]
-        para.delta_min: Minimum delta [4]
-        para.v_min: Minimum volume [27]
-        para.noise: The noise level of the data, used for data truncation calculation [2*rms]
-        para.dc: auto
+            para.rho_min: Minimum density [5*rms]
+            para.delta_min: Minimum delta [4]
+            para.v_min: Minimum volume [25, 5]
+            para.noise: The noise level of the data, used for data truncation calculation [2*rms]
+            para.dc: auto
+            para.save_loc: 是否保存检测的局部核表，默认为False(不保存)
     :param save_folder：检测结果保存路径，如果是分块模式，中间结果也会保存
-    :param save_loc: 是否保存检测的局部核表，默认为False(不保存)
 
     :return:
         结果保存的路径列表[字典]
@@ -60,7 +36,7 @@ def localDenCluster(data_name, para, save_folder, save_loc):
     ldc_cfg['outcat_wcs_name'] = outcat_wcs_name
     ldc_cfg['detect_log'] = detect_log
     # ldc_cfg['fig_name'] = fig_name
-    if save_loc:
+    if para.save_loc:
         loc_outcat_name = os.path.join(save_folder, 'LDC_auto_loc_outcat.csv')
         loc_outcat_wcs_name = os.path.join(save_folder, 'LDC_auto_loc_outcat_wcs.csv')
         ldc_cfg['loc_outcat_name'] = loc_outcat_name
@@ -69,7 +45,6 @@ def localDenCluster(data_name, para, save_folder, save_loc):
         loc_outcat_name = None
         loc_outcat_wcs_name = None
 
-    # data = Data(data_name)
     data = Data(data_path=data_name, save_folder=save_folder, v_st_end=para.v_st_end, l_st_end=para.l_st_end,
                 b_st_end=para.b_st_end)
     data.calc_background_rms(rms_key=para.rms_key, data_rms_path=para.data_rms_path, rms=para.rms)
@@ -122,7 +97,7 @@ def localDenCluster_split_mode(data_name, para, save_folder_all, save_loc):
     for ii, sub_data_name in enumerate(sub_cube_path_list):
         sub_save_folder = sub_data_name.replace('.fits', '')
         os.makedirs(sub_save_folder, exist_ok=True)
-        ldc_cfg = localDenCluster(sub_data_name, para, sub_save_folder, save_loc)
+        ldc_cfg = localDenCluster(sub_data_name, para, sub_save_folder)
 
         # 处理局部块的核表
         outcat_name = ldc_cfg['outcat_name']
@@ -149,12 +124,15 @@ def localDenCluster_split_mode(data_name, para, save_folder_all, save_loc):
 def ldc_base(data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_name, loc_outcat_wcs_name, mask_name,
              fig_name):
     """
-    :param mask_name: 掩模数据的保存路径(str) [*.fits]
+    :param data: Data类的实体
+    :param para: Param类的实体
+
+    :param detect_log: 检测中的信息保存文件(str) [*.txt]
     :param outcat_name: 基于像素单位的核表保存路径(str) [*.csv]
     :param outcat_wcs_name: 基于wcs的核表保存路径(str) [*.csv]
     :param loc_outcat_name: 基于像素单位的局部区域核表保存路径(str) [*.csv]
     :param loc_outcat_wcs_name: 基于wcs的局部区域核表保存路径(str) [*.csv]
-    :param detect_log: 检测中的信息保存文件(str) [*.txt]
+    :param mask_name: 掩模数据的保存路径(str) [*.fits]
     :param fig_name: 检测结果可视化图片的路径(str) [*.png]
     """
 
@@ -177,7 +155,4 @@ def ldc_base(data, para, detect_log, outcat_name, outcat_wcs_name, loc_outcat_na
 
 
 if __name__ == '__main__':
-    data_name = r'D:\LDC\test_data\R2_R16_region\0145-005_L.fits'
-    para = Param(delta_min=4, gradmin=0.01, v_min=27, noise_times=21, rms_times=25)
-    save_folder = r'D:\LDC\test_data\R2_R16_region\0145-005_L13_noise_21_rho_25_126'
-    LDC_main(data_name, para, save_folder, save_loc=False)
+    pass

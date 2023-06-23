@@ -9,7 +9,7 @@ from DensityClust.LocalDensityClustering_main import localDenCluster
 from fit_clump_function import main_fit_gauss_3d as mgm
 
 
-def LDC_MGM_split_mode(data_name, para, save_folder_all, save_loc, save_mgm_png):
+def LDC_MGM_split_mode(data_name, para, save_folder_all, save_mgm_png):
     """
     LDC algorithm
     :param data_name: 待检测数据的路径(str)，fits文件
@@ -43,7 +43,7 @@ def LDC_MGM_split_mode(data_name, para, save_folder_all, save_loc, save_mgm_png)
     for ii, sub_data_name in enumerate(sub_cube_path_list):
         sub_save_folder = sub_data_name.replace('.fits', '')
         os.makedirs(sub_save_folder, exist_ok=True)
-        ldc_cfg = localDenCluster(sub_data_name, para, sub_save_folder, save_loc)
+        ldc_cfg = localDenCluster(sub_data_name, para, sub_save_folder)
 
         # 处理局部块的核表
         outcat_name = ldc_cfg['outcat_name']
@@ -90,23 +90,39 @@ def LDC_MGM_split_mode(data_name, para, save_folder_all, save_loc, save_mgm_png)
     show_clumps.make_plot_wcs_1(outcat_fit_wcs_all, data_wcs, data.data_cube, fig_name=fig_name)
 
 
-def LDC_MGM_main(data_name, para, save_folder=None, split=False, save_loc=False, save_mgm_png=False, thresh_num=1):
+def LDC_MGM_main(data_name, para, save_folder=None, split=False, save_mgm_png=False, thresh_num=1):
     """
     LDC_MGM算法入口，对指定的数据进行检测，将结果保存到指定位置
-    data_name：数据文件[*.fits]
-    para: LDC 算法的参数设置
-    save_folder：检测结果保存路径，如果是分块模式，中间结果也会保存
+    :param data_name: 待检测数据的路径(str)，fits文件
+    :param para: 算法参数, dict
+            para.rho_min: Minimum density [5*rms]
+            para.delta_min: Minimum delta [4]
+            para.v_min: Minimum volume [25, 5]
+            para.noise: The noise level of the data, used for data truncation calculation [2*rms]
+            para.dc: auto
+    :param save_folder: 检测结果保存路径，如果是分块模式，中间结果也会保存
+    :param save_loc: 是否保存检测的局部核表，默认为False(不保存)
     split: 是否采用分块检测再拼接策略
     save_mgm_png: 是否保存MGM的中间结果图片，默认为False: 不保存
+
+    Usage:
+
+    data_name = r'*******.fits'
+    para = Param(delta_min=4, gradmin=0.01, v_min=[25, 5], noise_times=5, rms_times=2, rms_key='RMS')
+    para.rm_touch_edge = False
+    save_folder = r'########'
+    save_mgm_png = False
+    LDC_MGM_main(data_name, para, save_folder, split=False, save_mgm_png=save_mgm_png)
+
     """
     if save_folder is None:
         save_folder = data_name.replace('.fits', '')
     os.makedirs(save_folder, exist_ok=True)
 
     if split:
-        LDC_MGM_split_mode(data_name, para, save_folder_all=save_folder, save_loc=save_loc, save_mgm_png=save_mgm_png)
+        LDC_MGM_split_mode(data_name, para, save_folder_all=save_folder, save_mgm_png=save_mgm_png)
     else:
-        ldc_cfg = localDenCluster(data_name, para, save_folder, save_loc)
+        ldc_cfg = localDenCluster(data_name, para, save_folder)
         outcat_name = ldc_cfg['outcat_name']
         mask_name = ldc_cfg['mask_name']
         data_name = ldc_cfg['data_path']
@@ -121,4 +137,4 @@ if __name__ == '__main__':
     para.rm_touch_edge = False
     save_folder = r'D:\LDC\test_data\R2_R16_region\0145-005_L13_noise_2_rho_5_128_deb1'
     save_mgm_png = False
-    LDC_MGM_main(data_name, para, save_folder, split=False, save_loc=False, save_mgm_png=save_mgm_png)
+    LDC_MGM_main(data_name, para, save_folder, split=False, save_mgm_png=save_mgm_png)

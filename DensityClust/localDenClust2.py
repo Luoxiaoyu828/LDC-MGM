@@ -830,7 +830,7 @@ class LocalDensityCluster:
 
         return LDC_outcat, label_data_all
 
-    def change_pix2world(self, outcat):
+    def change_pix2world(self, outcat, id_prefix='MWISP'):
         """
         将算法检测的结果(像素单位)转换到天空坐标系上去
         :return:
@@ -861,7 +861,7 @@ class LocalDensityCluster:
 
                 id_clumps = []  # MWSIP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
                 for item_l, item_b in zip(cen1, cen2):
-                    str_l = 'MWSIP' + ('%.03f' % item_l).rjust(7, '0')
+                    str_l = id_prefix + ('%.03f' % item_l).rjust(7, '0')
                     if item_b < 0:
                         str_b = '-' + ('%.03f' % abs(item_b)).rjust(6, '0')
                     else:
@@ -872,7 +872,7 @@ class LocalDensityCluster:
             elif 'Cen3' in table_title:
                 # 3d result
                 if abs(self.data.data_header['CDELT3']) > 10:
-                    # case m/s
+                    # case m/s  CUNIT3 = m/s
                     cdelt3 = 1000
                 else:
                     # case km/s
@@ -888,7 +888,7 @@ class LocalDensityCluster:
                 clustSize = np.column_stack([size1, size2, size3]) * self.para.res
                 id_clumps = []  # MWISP017.558+00.150+020.17  分别表示：银经：17.558°， 银纬：0.15°，速度：20.17km/s
                 for item_l, item_b, item_v in zip(cen1, cen2, cen3 / cdelt3):
-                    str_l = 'MWISP' + ('%.03f' % item_l).rjust(7, '0')
+                    str_l = id_prefix + ('%.03f' % item_l).rjust(7, '0')
                     if item_b < 0:
                         str_b = '-' + ('%.03f' % abs(item_b)).rjust(6, '0')
                     else:
@@ -966,25 +966,33 @@ class LocalDensityCluster:
             outcat = outcat
         return outcat, label_data_all_
 
-    def get_outcat_local(self, outcat):
+    def get_outcat_local(self, outcat, cen1_edge=None, cen2_edge=None, cen3_edge=None):
         """
         返回局部区域的检测结果：
         原始图为120*120  局部区域为30-->90, 30-->90 左开右闭
+
         :param outcat: LDC outcat_record
+
         :return:
         """
+        if cen3_edge is None:
+            cen3_edge = [60, 60]
+        if cen2_edge is None:
+            cen2_edge = [30, 30]
+        if cen1_edge is None:
+            cen1_edge = [30, 30]
         if self.data.n_dim == 3:
             size_x, size_y, size_v = self.data.data_cube.shape
             # outcat_record = pd.read_csv(txt_name, sep='\t')
-            cen1_min = 30
-            cen1_max = size_v - 30 - 1
-            cen2_min = 30
-            cen2_max = size_y - 30 - 1
-            cen3_min = 60
-            cen3_max = size_x - 60 - 1
+            cen1_min = cen1_edge[0]
+            cen1_max = size_v - cen1_edge[1] - 1
+            cen2_min = cen2_edge[0]
+            cen2_max = size_y - cen2_edge[1] - 1
+            cen3_min = cen3_edge[0]
+            cen3_max = size_x - cen3_edge[1] - 1
+
             aa = outcat.loc[outcat['Cen1'] > cen1_min]
             aa = aa.loc[outcat['Cen1'] <= cen1_max]
-
             aa = aa.loc[outcat['Cen3'] > cen3_min]
             aa = aa.loc[outcat['Cen3'] <= cen3_max]
 
@@ -992,15 +1000,13 @@ class LocalDensityCluster:
             loc_outcat = aa.loc[outcat['Cen2'] <= cen2_max]
         else:
             size_x, size_y = self.data.data_cube.shape
-            # outcat_record = pd.read_csv(txt_name, sep='\t')
-            cen1_min = 30
-            cen1_max = size_x - 30 - 1
-            cen2_min = 30
-            cen2_max = size_y - 30 - 1
+            cen1_min = cen1_edge[0]
+            cen1_max = size_x - cen1_edge[1] - 1
+            cen2_min = cen2_edge[0]
+            cen2_max = size_y - cen2_edge[1] - 1
 
             aa = outcat.loc[outcat['Cen1'] > cen1_min]
             aa = aa.loc[outcat['Cen1'] <= cen1_max]
-
             aa = aa.loc[outcat['Cen2'] > cen2_min]
             loc_outcat = aa.loc[outcat['Cen2'] <= cen2_max]
         return loc_outcat
