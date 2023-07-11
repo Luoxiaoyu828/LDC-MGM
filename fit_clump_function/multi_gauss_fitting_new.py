@@ -222,7 +222,7 @@ def fitting_multi_gauss_params(points_all_df, params_init, ndim=3):
         Y = points_all_df['y_1'].values
         gauss_multi_value = gauss_multi_func(X, Y)
         Intensity = points_all_df['Intensity'].values
-        weight = gauss_multi_value ** power / ((gauss_multi_value ** power).sum())  # 创建拟合的权重
+        weight = gauss_multi_value ** power / (np.sum(gauss_multi_value ** power))  # 创建拟合的权重
         errorfunc = lambda p: np.ravel((get_multi_gauss_func_by_params(p, ndim=2)(X, Y) - Intensity) * weight)
         low_, up_ = get_params_bound(params_init, ndim=2)
         # [low_.extend([0, 20, 20, 0, 0, 0]) for _ in range(gauss_num)]
@@ -235,7 +235,7 @@ def fitting_multi_gauss_params(points_all_df, params_init, ndim=3):
         V = points_all_df['v_0'].values
         gauss_multi_value = gauss_multi_func(X, Y, V)
         Intensity = points_all_df['Intensity'].values
-        weight = gauss_multi_value ** power / ((gauss_multi_value ** power).sum())  # 创建拟合的权重
+        weight = gauss_multi_value ** power / (np.sum(gauss_multi_value ** power))    # 创建拟合的权重
         errorfunc = lambda p: np.ravel((get_multi_gauss_func_by_params(p, ndim=3)(X, Y, V) - Intensity) * weight)
         low_, up_ = get_params_bound(params_init, ndim=3)
     else:

@@ -12,8 +12,8 @@ import pandas as pd
 import time
 import tqdm
 
-from DensityClust.clustring_subfunc import get_xyz, my_print, get_area_v_len, get_clump_angle
-from DensityClust.clustring_subfunc import assignation, divide_boundary_by_grad
+from distrib.DensityClust.clustring_subfunc import get_xyz, my_print, get_area_v_len, get_clump_angle
+from distrib.DensityClust.clustring_subfunc import assignation, divide_boundary_by_grad
 from Generate.fits_header import Header
 
 
@@ -876,7 +876,7 @@ class LocalDensityCluster:
             self.result.detect_num[0] = LDC_outcat.shape[0]
             if self.para.rm_touch_edge:
                 LDC_outcat, label_data_all = self.touch_edge(LDC_outcat, label_data_all)
-                self.result.detect_num[1] = LDC_outcat.shape[0]
+            self.result.detect_num[1] = LDC_outcat.shape[0]
 
             if self.para.save_loc:
                 loc_LDC_outcat = self.get_outcat_local(LDC_outcat)
@@ -972,10 +972,7 @@ class LocalDensityCluster:
         :param outcat:
         :return:
         """
-        # data_name = r'F:\DensityClust_distribution_class\DensityClust\m16_denoised.fits'
-        # outcat_name = r'F:\DensityClust_distribution_class\DensityClust\m16_denoised\LDC_outcat.txt'
-        # data = fits.getdata(data_name)
-        # outcat_record = pd.read_csv(outcat_name, sep='\t')
+
         if self.data.n_dim == 3:
             [size_x, size_y, size_v] = self.data.data_cube.shape
             indx = []
@@ -993,9 +990,9 @@ class LocalDensityCluster:
 
             inde_all = []
             for item_ in indx:
-                [inde_all.append(item) for item in item_]
+                [inde_all.append(item) for item in item_]   # 索引是从0开始的，outcat 中的ID是从1开始的
 
-            inde_all = np.array(list(set(inde_all)))
+            inde_all = np.array(list(set(inde_all)))  # 去除重复
             label_data_all_ = label_data_all.copy()
         else:
             [size_x, size_y] = self.data.data_cube.shape
@@ -1017,10 +1014,11 @@ class LocalDensityCluster:
             inde_all = np.array(list(set(inde_all)))
             label_data_all_ = label_data_all.copy()
         if inde_all.shape[0] > 0:
-            outcat = outcat.drop(outcat.index[inde_all])
+            # TODO 这个地方可能会有问题
             for item_i in outcat.index[inde_all]:
-                label_data_all_[label_data_all == item_i] = 0
-
+                label_data_all_[label_data_all == (item_i + 1)] = 0
+                break
+            outcat = outcat.drop(outcat.index[inde_all])
         else:
             outcat = outcat
         return outcat, label_data_all_

@@ -1,12 +1,12 @@
 import os
 import shutil
 import pandas as pd
-from DensityClust.localDenClust2 import LocalDensityCluster as LDC
-from DensityClust import split_cube
-from tools import show_clumps
-from DensityClust.localDenClust2 import Data, Param
-from DensityClust.LocalDensityClustering_main import localDenCluster
-from fit_clump_function import main_fit_gauss_3d as mgm
+from distrib.DensityClust.localDenClust2 import LocalDensityCluster as LDC
+from distrib.DensityClust import split_cube
+from distrib.tools import show_clumps
+from distrib.DensityClust.localDenClust2 import Data, Param
+from distrib.DensityClust.LocalDensityClustering_main import localDenCluster
+from distrib.fit_clump_function import main_fit_gauss_3d as mgm
 
 
 def LDC_MGM_split_mode(data_name, para, save_folder_all, save_mgm_png):
@@ -107,7 +107,7 @@ def LDC_MGM_main(data_name, para, save_folder=None, split=False, save_mgm_png=Fa
 
     Usage:
     from DensityClust.localDenClust2 import Param
-    from LDC_MGM import LDC_MGM_main as ldc_mgm
+    from LDC_MGM_main import LDC_MGM_main as ldc_mgm
 
     data_name = r'*******.fits'
     para = Param(delta_min=4, gradmin=0.01, v_min=[25, 5], noise_times=5, rms_times=2, rms_key='RMS')

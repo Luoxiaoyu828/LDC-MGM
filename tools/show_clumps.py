@@ -5,7 +5,7 @@ from astropy import wcs
 import os
 import numpy as np
 from astropy.coordinates import SkyCoord
-from tools.ultil_lxy import get_data_points
+from distrib.tools.ultil_lxy import get_data_points
 
 
 plt.rcParams['xtick.direction'] = 'in'
@@ -311,7 +311,7 @@ def ldc_pic_ver(path_detect='', path_save_fig='', loc=False):
     f = open(detect_log)
     file_name = [item for item in f.readlines() if item.count('fits')]
     f.close()
-    file_name = file_name[0].split(' ')[-1][:-1]
+    file_name = file_name[0].split(': ')[-1][:-1]
     path_data = file_name
     deal_data(path_outcat, path_outcat_wcs, path_mask, path_data, path_save_fig, v_len=30)
 

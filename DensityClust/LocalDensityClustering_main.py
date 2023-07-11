@@ -1,10 +1,10 @@
 import os
 import shutil
 import pandas as pd
-from DensityClust.localDenClust2 import LocalDensityCluster as LDC
-from DensityClust import split_cube
-from tools.show_clumps import make_plot_wcs_1
-from DensityClust.localDenClust2 import Data, Param
+from distrib.DensityClust.localDenClust2 import LocalDensityCluster as LDC
+from distrib.DensityClust import split_cube
+from distrib.tools.show_clumps import make_plot_wcs_1
+from distrib.DensityClust.localDenClust2 import Data
 
 
 def localDenCluster(data_name, para, save_folder):

@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 import shutil
 import threading
 
-from DensityClust.localDenClust2 import Data
-from DensityClust.localDenClust2 import LocalDensityCluster as LDC
+from distrib.DensityClust.localDenClust2 import Data
+from distrib.DensityClust.localDenClust2 import LocalDensityCluster as LDC
 
 
 def make_plot_wcs_1(outcat_wcs, data_wcs, data_cube):

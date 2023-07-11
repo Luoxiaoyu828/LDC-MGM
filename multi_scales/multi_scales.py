@@ -1,6 +1,6 @@
 from scipy.ndimage import gaussian_filter
 import astropy.io.fits as fits
-from tools.show_clumps import display_data
+from distrib.tools import display_data
 
 
 if __name__ == '__main__':

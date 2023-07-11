@@ -1,9 +1,7 @@
 from matplotlib import pyplot as plt
-import pandas as pd
 from astropy.coordinates import SkyCoord
-import os
-from DensityClust.clustring_subfunc import *
-from DensityClust.clustring_subfunc import get_wcs
+from distrib.DensityClust.clustring_subfunc import *
+from distrib.DensityClust.clustring_subfunc import get_wcs
 
 
 plt.rcParams['xtick.direction'] = 'in'

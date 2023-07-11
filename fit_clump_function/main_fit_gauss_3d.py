@@ -4,11 +4,12 @@ import time
 import pandas as pd
 from tqdm import tqdm
 import threading
-from fit_clump_function import multi_gauss_fitting_new, touch_clump
-from tools.ultil_lxy import create_folder, get_points_by_clumps_id, move_csv_png, restruct_fitting_outcat,\
+from distrib.fit_clump_function import multi_gauss_fitting_new
+from distrib.fit_clump_function import touch_clump
+from distrib.tools.ultil_lxy import create_folder, get_points_by_clumps_id, move_csv_png, restruct_fitting_outcat,\
     get_save_clumps_xyv
-from tools import show_clumps
-from DensityClust.localDenClust2 import Data, Param
+from distrib.tools import show_clumps
+from distrib.DensityClust.localDenClust2 import Data
 
 
 def fitting_LDC_clumps(points_path, outcat_name, data_rms, thresh_num, save_png=False, ldc_mgm_path=None,
