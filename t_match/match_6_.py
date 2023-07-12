@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import astropy.io.fits as fits
 import os
 
 

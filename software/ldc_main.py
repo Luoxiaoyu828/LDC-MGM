@@ -1,8 +1,8 @@
-from distrib.fit_clump_function import main_fit_gauss_3d
-from distrib.DensityClust import LocalDensityClustering_main
+from fit_clump_function import main_fit_gauss_3d
+from DensityClust import LocalDensityClustering_main
 import yaml
 import os
-from distrib.DensityClust.localDenClust2 import Param
+from DensityClust.localDenClust2 import Param
 
 this_cwd = os.getcwd()
 

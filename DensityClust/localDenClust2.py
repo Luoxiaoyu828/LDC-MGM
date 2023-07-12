@@ -12,8 +12,8 @@ import pandas as pd
 import time
 import tqdm
 
-from distrib.DensityClust.clustring_subfunc import get_xyz, my_print, get_area_v_len, get_clump_angle
-from distrib.DensityClust.clustring_subfunc import assignation, divide_boundary_by_grad
+from DensityClust.clustring_subfunc import get_xyz, my_print, get_area_v_len, get_clump_angle
+from DensityClust.clustring_subfunc import assignation, divide_boundary_by_grad
 from Generate.fits_header import Header
 
 

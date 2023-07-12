@@ -309,8 +309,8 @@ def deal_data(path_data, path_outcat, path_outcat_wcs, path_mask, path_save_fig,
 
 if __name__ == '__main__':
 
-    path_detect1 = r'D:\OneDrive_lxy\OneDrive - ctgu.edu.cn\LDC_MGM-main\data/debug data/mgm_bug/test3'
-    path_data1 = r'D:\OneDrive_lxy\OneDrive - ctgu.edu.cn\LDC_MGM-main\data/debug data/mgm_bug/15.684-0.29_0.8_U.fits'
+    path_detect1 = r'/data/debug data/mgm_bug/test3'
+    path_data1 = r'/data/debug data/mgm_bug/15.684-0.29_0.8_U.fits'
     path_save_fig = r'D:\OneDrive_lxy\OneDrive - ctgu.edu.cn\LDC_MGM-main\data/debug data/mgm_bug/test3/fig2'
     alg_name = 'LDC'
     path_outcat = os.path.join(path_detect1, alg_name + '_outcat.csv')

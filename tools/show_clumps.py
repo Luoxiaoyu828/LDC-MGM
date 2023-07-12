@@ -5,7 +5,7 @@ from astropy.wcs import WCS
 import os
 import numpy as np
 from astropy.coordinates import SkyCoord
-from distrib.tools.ultil_lxy import get_data_points
+from tools.ultil_lxy import get_data_points
 
 
 plt.rcParams['xtick.direction'] = 'in'

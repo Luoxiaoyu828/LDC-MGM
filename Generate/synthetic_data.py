@@ -44,7 +44,7 @@ class Synthetic:
         if not os.path.exists(path3_outcat):
             os.makedirs(path3_outcat)
         if self.core_sample_path is None:
-            self.core_sample_path = './sample_data.txt'
+            self.core_sample_path = 'sample_data.txt'
         a = np.loadtxt(self.core_sample_path, skiprows=1)  # 读取样本数据
         fits_header = fits.open(self.real_data_path)[0].header  # 读取头文件
         angle = np.random.uniform(0, 180, size=[a.shape[0], 1])  # 随机生成旋转角度

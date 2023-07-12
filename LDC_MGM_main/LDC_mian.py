@@ -1,5 +1,5 @@
 import os
-from distrib.DensityClust.LocalDensityClustering_main import localDenCluster
+from DensityClust.LocalDensityClustering_main import localDenCluster
 
 
 def LDC_main(data_name, para, save_folder=None):

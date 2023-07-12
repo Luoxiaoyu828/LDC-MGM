@@ -1,4 +1,4 @@
-from distrib.t_match import match_6_
+from t_match import match_6_
 import os
 import yaml
 

@@ -1,12 +1,12 @@
 import os
-from distrib.tools.show_clumps import make_plot_wcs_1
+from tools.show_clumps import make_plot_wcs_1
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from spectral_cube import SpectralCube
-from distrib.DensityClust.localDenClust2 import LocalDensityCluster as LDC
-from distrib.DensityClust.localDenClust2 import Data
-from distrib.t_match.match_6_ import match_simu_detect_new
+from DensityClust.localDenClust2 import LocalDensityCluster as LDC
+from DensityClust.localDenClust2 import Data
+from t_match.match_6_ import match_simu_detect_new
 
 
 split_list = [[0, 150, 0, 150], [0, 150, 90, 271], [0, 150, 210, 361],
