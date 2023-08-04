@@ -65,7 +65,7 @@ def match_simu_detect(simulated_outcat_path, detected_outcat_path, match_save_pa
         d_ij_value = distance.min()
         if d_ij_value == max_d:  # 表示距离矩阵里面所有元素都匹配上了
             break
-        [simu_i, gauss_j] = np.where(distance==d_ij_value)
+        [simu_i, gauss_j] = np.where(distance == d_ij_value)
         simu_i, gauss_j = simu_i[0], gauss_j[0]
         cen_simu_i = Cen_simulate[simu_i]
         size_simu_i = Size_simulate[simu_i]
@@ -73,16 +73,16 @@ def match_simu_detect(simulated_outcat_path, detected_outcat_path, match_save_pa
 
         # 确定误差项
         temp = np.array([Error_xyz, size_simu_i / 2.3548])
-        Error_xyz1 = temp.min(axis=0)
+        error_xyz1 = temp.min(axis=0)
 
         d_ij = np.abs(cen_simu_i - cen_gauss_j)
         match_num_ = match_num
-        if (d_ij<= Error_xyz1).all():
+        if (d_ij <= error_xyz1).all():
             # print([d_ij, d_ij_value])
-            distance[simu_i,:] = np.ones([gauss_len]) * max_d
-            distance[:, gauss_j] = np.ones([simu_len]) * max_d
             match_num = match_num + 1
             match_record_simu_detect.append(np.array([d_ij_value, simu_i + 1, gauss_j + 1]))  # 误差 仿真表索引 检测表索引
+        distance[simu_i, :] = np.ones([gauss_len]) * max_d
+        distance[:, gauss_j] = np.ones([simu_len]) * max_d
 
         if match_num == match_num_:
             break
@@ -103,7 +103,7 @@ def match_simu_detect(simulated_outcat_path, detected_outcat_path, match_save_pa
         new_cols_sium = table_s.keys()
         new_cols_detect = table_g.keys()
 
-        names = ['s_' + item for item in new_cols_sium] #列名
+        names = ['s_' + item for item in new_cols_sium] # 列名
         names1 = ['f_' + item for item in new_cols_detect]  # 列名
         table_title = names + names1
 
@@ -273,11 +273,11 @@ def match_simu_detect_new(sop, dop, msp, s_cen=None, s_size=None, g_cen=None):
         match_num_ = match_num
         if (d_ij<= Error_xyz1).all():
             # print([d_ij, d_ij_value])
-            distance[simu_i,:] = np.ones([gauss_len]) * max_d
-            distance[:, gauss_j] = np.ones([simu_len]) * max_d
             match_num = match_num + 1
             match_record_simu_detect.append(np.array([d_ij_value, simu_i + 1, gauss_j + 1]))  # 误差 仿真表索引 检测表索引
 
+        distance[simu_i, :] = np.ones([gauss_len]) * max_d
+        distance[:, gauss_j] = np.ones([simu_len]) * max_d
         if match_num == match_num_:
             break
     match_record_simu_detect = np.array(match_record_simu_detect)
@@ -451,11 +451,10 @@ def match_simu_detect_2d(simulated_outcat_path, detected_outcat_path, match_save
         match_num_ = match_num
         if (d_ij <= Error_xyz1).all():
             # print([d_ij, d_ij_value])
-            distance[simu_i, :] = np.ones([gauss_len]) * max_d
-            distance[:, gauss_j] = np.ones([simu_len]) * max_d
             match_num = match_num + 1
             match_record_simu_detect.append(np.array([d_ij_value, simu_i + 1, gauss_j + 1]))  # 误差 仿真表索引 检测表索引
-
+        distance[simu_i, :] = np.ones([gauss_len]) * max_d
+        distance[:, gauss_j] = np.ones([simu_len]) * max_d
         if match_num == match_num_:
             break
     match_record_simu_detect = np.array(match_record_simu_detect)
