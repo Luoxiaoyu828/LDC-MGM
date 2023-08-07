@@ -72,7 +72,7 @@ data = fits.getdata(r'example_data\3d_Clumps\gaussian_out_000.fits')
 outcat = r'***.csv'
 make_plot.make_plot(outcat, data, lable_num=False)
 ```
-<img src="https://github.com/Luoxiaoyu828/LDC-MGM/blob/main/data/2d_Clumps/gaussian2D_out_000/result.png" width="400px">
+<img src="https://github.com/Luoxiaoyu828/LDCMGM/blob/main/data/2d_Clumps/gaussian2D_out_000/result.png" width="400px">
 
 ## Citation
 If you use this code in a scientific publication, I would appreciate citation/reference to this repository. 
